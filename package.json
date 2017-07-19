@@ -1,0 +1,30 @@
+{
+  "name": "seqinalysis",
+  "version": "0.0.1",
+  "description": "Utility for analysing and comparing Seqin sequencer instruments",
+  "main": "seqinalysis.js",
+  "dependencies": {
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/loopdotcoop/seqinalysis.git"
+  },
+  "keywords": [
+    "seqin",
+    "sequencer",
+    "instrument",
+    "web audio",
+    "utility",
+    "analysis",
+    "development"
+  ],
+  "author": "Rich Plastow <rich@loop.coop> (http://loop.coop/)",
+  "contributors": [
+    "Monty Anderson <monty.linux@gmail.com>"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/loopdotcoop/seqinalysis/issues"
+  },
+  "homepage": "https://loopdotcoop.github.io/seqinalysis/"
+}
