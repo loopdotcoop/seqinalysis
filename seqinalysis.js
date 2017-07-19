@@ -400,7 +400,13 @@ ROOT.SEQINALYSIS = {
                .replace(/%/g,'%25').replace(/&/g,'%26').replace(/=/g,'%3d')
             query.push(`${performBtn.id}=${configString}`)
         })
-        ROOT.location = './index.html?' + query.join('&')
+        let $iframe
+        if (ROOT.parent)
+            $iframe = ROOT.parent.document.querySelector('iframe#seqinalysis')
+        if ($iframe)
+            $iframe.src = $iframe.src.split('?')[0] + '?' + query.join('&')
+        else
+            ROOT.location = './index.html?' + query.join('&')
     }
 
   , scrollTo: to => {

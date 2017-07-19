@@ -28,16 +28,33 @@ removeChild(this)},d.body.appendChild(p)):alert(h)}}('position:fixed!importa'+
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Podkova:600">
 <link rel="stylesheet" href="seqinalysis.css">
 
-<!-- Seqin -->
-<script src="https://rawgit.com/loopdotcoop/seqin/224bb9a767656937ae02ddb36d1e6e4420af306c/seqin-directory.js"></script>
-<script src="https://rawgit.com/loopdotcoop/seqin-si/master/Seqin.js"></script>
-<script>(window.SEQIN && SEQIN.Seqin) || document.write('<script src="../node_modules/seqin-si/Seqin.js"><\/script>')</script>
+<!-- Initial Seqin preparation -->
+<script>
+window.SEQIN = window.SEQIN || {}
+
+//// Prefer a custom seqin-directory defined in the containing-window, if one
+//// exists. See example/custom-directory.html
+if (parent && parent.SEQIN && parent.SEQIN.directory)
+    window.SEQIN.directory = parent.SEQIN.directory
+else
+    //// Otherwise, default to the current latest version.
+    document.write('<script src="https://rawgit.com/loopdotcoop/seqin/master/seqin-directory.js"><\/script>')
+</script>
+
+<script>
+//// Prefer seqin-si defined in the containing-window’s custom directory.
+(window.SEQIN && SEQIN.Seqin) ||
+//// Otherwise, default to the current latest version.
+document.write('<script src="https://rawgit.com/loopdotcoop/seqin-si/master/Seqin.js"><\/script>')
+</script>
+
+<!-- Load the main Seqinalysis app -->
 <script src="seqinalysis.js"></script>
 
 </head>
 <body>
 
-<h1><a href="../index.html">Seqinalysis 0.0.1</a></h1>
+<h1><a href="https://loopdotcoop.github.io/seqinalysis/">Seqinalysis 0.0.2</a></h1>
 
 <div id="seqinalysis">
   <nav>

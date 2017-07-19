@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en-GB" style="padding:0;margin:0;height:100%">
+<head>
+
+<!-- Technical meta -->
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+<!-- Search engine meta -->
+<title>Seqinalysis: Custom Directory Example</title>
+<meta name="description" content="Example of how to use Seqinalysis with your own custom SEQIN.directory">
+<link rel="author" href="../README.md">
+
+<script>
+window.SEQIN = window.SEQIN || {}
+window.SEQIN.directory = {
+
+    //// The base ‘Seqin’ class.
+    CDN: 'https://rawgit.com/loopdotcoop/seqin-si/master/Seqin.js'
+  , META: {
+        NAME: 'Seqin'
+      , ID: 'si'
+      , VERSION: '0.0.12'
+      , SPEC: '20170705'
+      , HELP: 'The base class for all sequencer instruments. It’s not usually used directly - it just generates silent buffers.'
+    }
+
+    //// The ‘MathSeqin’ family.
+  , ma: {
+        CDN: 'https://rawgit.com/loopdotcoop/seqin-ma/master/MathSeqin.js'
+      , META: {
+            NAME: 'MathSeqin'
+          , ID: 'ma'
+          , VERSION: '0.0.5'
+          , SPEC: '20170705'
+          , HELP: 'The base class for all mathematical Seqins. It’s not usually used directly - it just generates silent buffers.'
+        }
+      , myma: {
+            CDN: 'example/MyLocalMathSeqin.js'
+          , META: {
+                NAME: 'MyLocalMathSeqin'
+              , ID: 'myma'
+              , VERSION: '0.0.1'
+              , SPEC: '20170705'
+              , HELP: 'Example of how to specify a locally-hosted Seqin - great for development!'
+            }
+        }
+    }
+}
+</script>
+
+</head>
+<body style="padding:0;margin:0;height:100%">
+<iframe id="seqinalysis" width="100%" height="100%"
+  src="../index.html?myma_0=txMyLocalMathSeqin+cc1+sr23400+sb2340&myma_0_0=txmyma_0_0+bc1+cb20+ve5+re255+gr0+bl128+pka+ekA"></iframe>
+</body>
+</html>
