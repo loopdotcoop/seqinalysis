@@ -1,6 +1,6 @@
 {
   "name": "seqinalysis",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Utility for analysing and comparing Seqin sequencer instruments",
   "main": "seqinalysis.js",
   "dependencies": {

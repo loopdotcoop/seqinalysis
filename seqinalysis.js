@@ -8,7 +8,6 @@ const
   , $$ = s => d.querySelectorAll.call(d, s)
 
 let instances = {}, performBtns = [], performances = []
-  , samplesPerBuffer, sampleRate
   , $out, $nav, $layered, layeredCanvasCtx, audioCtx
   , $sharedCache, $seqinDirectory, $seqinInstances
   , maxPerformanceSamples = 0
@@ -59,10 +58,6 @@ ROOT.SEQINALYSIS = {
 
     //// Initialises the app.
     init: config => {
-
-        //// Record config.
-        samplesPerBuffer = config.samplesPerBuffer || 900
-        sampleRate = config.sampleRate || 44100
 
         $out = $('#seqinalysis')
 
@@ -219,12 +214,12 @@ ROOT.SEQINALYSIS = {
         //// Again, only needed when an addButtonButton() is clicked.
         if (null == config) {
             config = {
-                samplesPerBuffer: 2340
-              , sampleRate:       23400
+                samplesPerBuffer: 600
               , channelCount:     1
-              , text: directoryInfo.META.NAME
+              , text:             id
             }
         }
+        config.sampleRate = audioCtx.sampleRate //@TODO allow instances to specify arbitrary sampleRate
         config.sharedCache = ROOT.sharedCache
         config.audioContext = audioCtx
 
@@ -286,7 +281,7 @@ ROOT.SEQINALYSIS = {
                 id // id
               , text: id // tx
               , bufferCount: 1 // bc
-              , cyclesPerBuffer: 20 // cb
+              , cyclesPerBuffer: 4 // cb
               , velocity: 5 // ve
               , red: colorScheme[0] // re
               , green: colorScheme[1] // gr
@@ -294,6 +289,8 @@ ROOT.SEQINALYSIS = {
               , playKey: keypressShortcut[0] // pk, eg 'a'
               , editKey: keypressShortcut[1] // ek, eg 'A'
             }
+        } else {
+            performBtnTally++
         }
         config.configString = performBtnConfigToString(config)
         config.$el = d.createElement('p')
@@ -345,25 +342,27 @@ ROOT.SEQINALYSIS = {
               , cyclesPerBuffer: config.cyclesPerBuffer
               , isLooping: false
               , events: [
-                    { at:0  , down:config.velocity }
-                  , { at:900, down:0 }
+                    { at:0 , down:config.velocity }
+                  , { at:20, down:0 }
                 ]
               , meta: config
             }).then( buffers => {
 
                 //// Store it.
                 performances.push({ config, buffers })
-                maxPerformanceSamples = Math.max( maxPerformanceSamples, samplesPerBuffer * (config.bufferCount||1) )
+                maxPerformanceSamples = Math.max( maxPerformanceSamples, instances[instanceID].samplesPerBuffer * (config.bufferCount||1) )
 
                 //// Update the layered and sharedCache visualisers.
                 updateLayeredVisualiser()
                 updateSharedCacheVisualiser()
 
                 //// Play the performance.
-                const src = audioCtx.createBufferSource()
-                src.buffer = buffers[0].data
-                src.connect(audioCtx.destination)
-                src.start(0)
+                buffers.forEach( (buffer, i) => {
+                    const src = audioCtx.createBufferSource()
+                    src.buffer = buffer.data
+                    src.connect(audioCtx.destination)
+                    src.start( audioCtx.currentTime + (buffer.data.length * i / audioCtx.sampleRate)) //@TODO allow instances to specifiy arbitrary sampleRate
+                })
 
             })
             return false
@@ -413,19 +412,19 @@ ROOT.SEQINALYSIS = {
 
   , scrollBy: by => {
         scroll += by
-        scroll = Math.max( Math.min(scroll, layeredWidth), 0) // clamp
+        // scroll = Math.max( Math.min(scroll, layeredWidth), 0) // clamp @TODO fix this
         updateLayeredVisualiser()
     }
 
   , zoomTo: to => {
         zoom = 0 !== to ? to : maxPerformanceSamples / layeredWidth // zero means 'show the entire waveform'
-        zoom = Math.max( Math.min(zoom, 16), 0.05)
+        // zoom = Math.max( Math.min(zoom, 16), 0.05) // clamp @TODO fix this
         updateLayeredVisualiser()
     }
 
   , zoomBy: by => {
         zoom *= by
-        zoom = Math.max( Math.min(zoom, 16), 0.05) // clamp
+        // zoom = Math.max( Math.min(zoom, 16), 0.05) // clamp @TODO fix this
         updateLayeredVisualiser()
     }
 
@@ -448,38 +447,46 @@ function updateLayeredVisualiser () {
     //// Delete the previous visualisation.
 	layeredCanvasCtx.clearRect(0, 0, $layered.width, $layered.height)
 
-	//// Draw each performance’s waveform.
+	//// Draw each performance’s buffers.
     performances.forEach( (performance,i) => {
 
-        //// Draw a filled shape.
-        const
-    	    channelBuffer = performance.buffers[0].data.getChannelData(0)
-          , xPerFrame = layeredWidth / maxPerformanceSamples * zoom
+    	//// Draw each buffer’s waveform.
+        performance.buffers.forEach( (buffer,j) => {
 
-            //// When zoomed in, interleave each waveform’s line.
-          , xOffset = (1 >= xPerFrame ? 0 : (i % performances.length) * xPerFrame / performances.length)
+            //// Draw a filled shape.
+            const
+        	    channelBuffer = buffer.data.getChannelData(0)
+              , xPerFrame = layeredWidth / maxPerformanceSamples * zoom
 
-            //// Set the waveform colour.
-          , fillColor = layeredCanvasCtx.createLinearGradient(0,0, 0,layeredHeight)
-          , red = performance.config.red, green = performance.config.green, blue = performance.config.blue
-        fillColor.addColorStop(0.0, `rgba(${red||0},${green||0},${blue||0},1)`)
-        fillColor.addColorStop(0.5, `rgba(${red||0},${green||0},${blue||0},0.3)`)
-        fillColor.addColorStop(1.0, `rgba(${red||0},${green||0},${blue||0},1)`)
-        layeredCanvasCtx.fillStyle = fillColor
+                //// When zoomed in, interleave each waveform’s line.
+              , xOffset = (1 >= xPerFrame ? 0 : (i % performances.length) * xPerFrame / performances.length)
 
-        //// Step through each x position of the layered-canvas.
-        let draws = 0
-        for ( let x=xOffset; x<layeredWidth; x+=Math.max(xPerFrame,1) ) {
-            const sampleValue = channelBuffer[ Math.floor((x + scroll) / xPerFrame) ]
-            if (null == sampleValue) break // end of data
-            layeredCanvasCtx.fillRect(
-                x                                // x position
-              , layeredHeight * 0.5                         // y position
-              , 1                                           // width
-              , sampleValue * layeredHeight * -0.5 // height
-            )
-            draws++
-        }
+                //// Set the waveform colour.
+              , fillColor = layeredCanvasCtx.createLinearGradient(0,0, 0,layeredHeight)
+              , red = performance.config.red, green = performance.config.green, blue = performance.config.blue
+
+            ////
+            const outerAlpha = (j % 2) ? 0.2 : 1
+            const innerAlpha = (j % 2) ? 1 : 0.2
+            fillColor.addColorStop(0.0, `rgba(${red||0},${green||0},${blue||0},${outerAlpha})`)
+            fillColor.addColorStop(0.5, `rgba(${red||0},${green||0},${blue||0},${innerAlpha})`)
+            fillColor.addColorStop(1.0, `rgba(${red||0},${green||0},${blue||0},${outerAlpha})`)
+            layeredCanvasCtx.fillStyle = fillColor
+
+            //// Step through each x position of the layered-canvas.
+            let draws = 0
+            for ( let x=xOffset; x<layeredWidth; x+=Math.max(xPerFrame,1) ) {
+                const sampleValue = channelBuffer[ Math.floor((x + scroll) / xPerFrame) - (channelBuffer.length * j) ]
+                if (null == sampleValue) continue // no data-point here @TODO loops should jump straight in at first data-point, and then `break` when hitting the end
+                layeredCanvasCtx.fillRect(
+                    x                                // x position
+                  , layeredHeight * 0.5                         // y position
+                  , 1                                           // width
+                  , sampleValue * layeredHeight * -0.5 // height
+                )
+                draws++
+            }
+        })
     })
 }
 
@@ -574,7 +581,7 @@ function instanceStringToConfig (config, configString) {
     const keys = {
         tx: 'text'
       , cc: 'channelCount'
-      , sr: 'sampleRate'
+    //   , sr: 'sampleRate' //@TODO allow instances to specify arbitrary sampleRate
       , sb: 'samplesPerBuffer'
     }
     configString.split('+').forEach( part => {
@@ -590,7 +597,7 @@ function instanceConfigToString (config) {
     const keys = {
         text: 'tx'
       , channelCount: 'cc'
-      , sampleRate: 'sr'
+    //   , sampleRate: 'sr' //@TODO allow instances to specify arbitrary sampleRate
       , samplesPerBuffer: 'sb'
     }
     let configString = []
