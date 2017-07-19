@@ -1,13 +1,3 @@
-/*
-Tested
-------
-+ __Android 7.1 (Pixel):__  Chrome 58+, Firefox 51+
-+ __iOS 10.3 (iPad Pro):__  Safari 10+
-+ __Windows 10:__           Edge 14+, Chrome 51+, Opera 38+
-+ __Windows XP:__           Firefox 45+
-+ __OS X El Sierra:__       Safari 10.1+
-*/
-
 !function (ROOT) {
 
 ROOT.sharedCache = {}
@@ -19,7 +9,7 @@ const
 
 let instances = {}, performBtns = [], performances = []
   , samplesPerBuffer, sampleRate
-  , $out, $layered, layeredCanvasCtx, audioCtx
+  , $out, $nav, $layered, layeredCanvasCtx, audioCtx
   , $sharedCache, $seqinDirectory, $seqinInstances
   , maxPerformanceSamples = 0
   , layeredWidth = ROOT.innerWidth - 16 // `-16` for 8px margins on each side
@@ -75,6 +65,11 @@ ROOT.SEQINALYSIS = {
         sampleRate = config.sampleRate || 44100
 
         $out = $('#seqinalysis')
+
+        //// Create a nav-bar and fill it with the standard Seqinalysis buttons.
+        $nav = d.createElement('nav')
+        $nav.innerHTML = navButtons()
+        $out.appendChild($nav)
 
         //// Create a canvas to visualise performances layered on top of each other.
         $layered = d.createElement('canvas')
@@ -403,10 +398,12 @@ ROOT.SEQINALYSIS = {
         let $iframe
         if (ROOT.parent)
             $iframe = ROOT.parent.document.querySelector('iframe#seqinalysis')
-        if ($iframe)
+        if ($iframe) {
             $iframe.src = $iframe.src.split('?')[0] + '?' + query.join('&')
-        else
-            ROOT.location = './index.html?' + query.join('&')
+        } else {
+            const pathParts = location.pathname.split('/')
+            ROOT.location = './' + pathParts.pop() + '?' + query.join('&')
+        }
     }
 
   , scrollTo: to => {
@@ -436,6 +433,11 @@ ROOT.SEQINALYSIS = {
         performances = []
         updateLayeredVisualiser()
     }
+
+  , clearAll: () => {
+        const pathParts = location.pathname.split('/')
+        ROOT.location = './' + pathParts.pop()
+  }
 
 
 }
@@ -683,6 +685,96 @@ function initAddButton (toAddButton) {
     }
 }
 
+
+function navButtons () { return `
+<!--
+    <a class="btn" href="javascript:void(0)" data-key="." title="To end (.)" onclick="SEQINALYSIS.scrollTo(@TODO);return !1">
+      <tt>&lt;</tt>
+    </a>
+-->
+    <a class="btn" href="javascript:SEQINALYSIS.save()" data-key="$" title="Save, by creating a link [dollar $]">
+      <svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640">
+        <path d="M78.065,363.566c-54.673,54.674-54.674,143.316,0,197.99s143.318,54.674,197.99,0l86.009-86.01
+        	c0,0-26.861-1.646-52.184-7.662c-25.323-6.016-39.235-14.055-39.235-14.055l-51.16,51.158c-23.432,23.432-61.422,23.432-84.853,0
+        	c-23.432-23.432-23.432-61.422-0.001-84.852l114.854-114.854c23.432-23.432,61.421-23.432,84.854,0c0,0,12.822,13.669,41.107-14.615
+        	c28.707-28.708,15.461-41.954,15.461-41.954c-54.674-54.674-143.318-54.674-197.991,0L78.065,363.566z"/>
+        <path d="M561.062,276.424c54.673-54.673,54.674-143.316,0-197.99s-143.317-54.674-197.99,0l-86.009,86.01
+        	c0,0,26.861,1.646,52.184,7.662s39.234,14.055,39.234,14.055l51.16-51.159c23.432-23.432,61.422-23.432,84.853,0
+        	c23.432,23.432,23.432,61.422,0.001,84.852L389.641,334.708c-23.432,23.432-61.421,23.432-84.854-0.001
+        	c0,0-12.822-13.669-41.107,14.615c-28.707,28.708-15.461,41.954-15.461,41.954c54.674,54.674,143.318,54.674,197.99,0
+        	L561.062,276.424z"/>
+      </svg>
+    </a>
+    <a class="btn" href="javascript:SEQINALYSIS.scrollTo(0)" data-key="," title="Jump to start [comma]">
+      <svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640">
+        <rect x="80" y="120" width="80" height="400"/>
+        <polygon points="520,120 520,520 160,320 "/>
+      </svg>
+    </a>
+    <a class="btn" href="javascript:SEQINALYSIS.scrollBy(window.innerWidth * -0.1)" data-key="ArrowLeft" title="Scroll left [arrow left]">
+      <svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640">
+        <polygon points="360,120 360,520 0,320 "/>
+        <rect x="320" y="280" width="320" height="80"/>
+      </svg>
+    </a>
+    <a class="btn" href="javascript:SEQINALYSIS.scrollBy(window.innerWidth * +0.1)" data-key="ArrowRight" title="Scroll right [arrow right]">
+      <svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640">
+        <rect y="280" width="320" height="80"/>
+        <polygon points="280,120 280,520 640,320 "/>
+      </svg>
+    </a>
+    <a class="btn" href="javascript:SEQINALYSIS.zoomBy(0.70710678118655)" data-key="ArrowDown" title="Zoom out [arrow down]">
+      <svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640">
+        <rect x="160" y="260" width="280" height="80"/>
+        <rect x="435.146" y="498.577" transform="matrix(-0.7071 -0.7071 0.7071 -0.7071 538.5785 1300.2417)" width="206.863" height="80"/>
+        <path d="M300,560C156.406,560,40,443.594,40,300S156.406,40,300,40s260,116.406,260,260S443.594,560,300,560z
+          M500,300c0-110.457-89.543-200-200-200s-200,89.543-200,200s89.543,200,200,200S500,410.457,500,300z"/>
+      </svg>    </a>
+    <a class="btn" href="javascript:SEQINALYSIS.zoomBy(1.414213562373095)" data-key="ArrowUp" title="Zoom in [arrow up]" >
+      <svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640">
+        <rect x="160" y="260" width="280" height="80"/>
+        <rect x="435.146" y="498.577" transform="matrix(-0.7071 -0.7071 0.7071 -0.7071 538.5785 1300.2417)" width="206.863" height="80"/>
+        <rect x="260" y="160" width="80" height="280"/>
+        <path d="M300,560C156.406,560,40,443.594,40,300S156.406,40,300,40s260,116.406,260,260S443.594,560,300,560z
+          M500,300c0-110.457-89.543-200-200-200s-200,89.543-200,200s89.543,200,200,200S500,410.457,500,300z"/>
+      </svg>
+    </a>
+    <!-- zoomTo(0) is treated as '1 pixel per sample-frame' -->
+    <a class="btn" href="javascript:SEQINALYSIS.zoomTo(0)" data-key="1" title="1px per sample [number one]">
+      <svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640">
+        <rect x="80" y="120" width="80" height="400"/>
+        <rect x="40" y="120" width="120" height="80"/>
+        <rect x="440" y="120" width="120" height="80"/>
+        <rect x="480" y="120" width="80" height="400"/>
+        <circle cx="312" cy="240" r="48"/>
+        <circle cx="312" cy="400" r="48"/>
+      </svg>
+    </a>
+    <!-- zoomTo(1) fits everything within window width -->
+    <a class="btn" href="javascript:SEQINALYSIS.scrollTo(0);SEQINALYSIS.zoomTo(1)" data-key="0" title="Zoom to fit [number zero]">
+      <svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640">
+        <polygon points="240,40 240,100 157.143,100 240,182.856 182.857,240 100,157.143 100,240 40,240 40,40 "/>
+        <polygon points="240,600 240,540 157.143,540 240,457.144 182.857,400 100,482.857 100,400 40,400 40,600 "/>
+        <polygon points="400,40 400,100 482.857,100 400,182.856 457.143,240 540,157.143 540,240 600,240 600,40 "/>
+        <polygon points="400,600 400,540 482.857,540 400,457.144 457.143,400 540,482.857 540,400 600,400 600,600 "/>
+      </svg>
+    </a>
+    <a class="btn" href="javascript:SEQINALYSIS.clearPerformances()" data-key="\\" title="Clear Performances [backslash]">
+      <svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640">
+        <path d="M320,600C165.36,600,40,474.64,40,320S165.36,40,320,40s280,125.36,280,280S474.64,600,320,600z M550,320
+        	c0-127.025-102.974-230-230-230C192.975,90,90,192.975,90,320c0,127.026,102.975,230,230,230C447.026,550,550,447.026,550,320z"/>
+        <rect x="80" y="280" transform="matrix(-0.7071 -0.7071 0.7071 -0.7071 320 772.5483)" width="480" height="80"/>
+      </svg>
+    </a>
+    <a class="btn" href="javascript:SEQINALYSIS.clearAll()" data-key="*" title="New Seqinalysis [asterisk]">
+      <svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640">
+        <polygon points="359.999,79.999 348.661,320 359.999,560 280,560 291.34,320 280,79.999 "/>
+        <polygon points="132.153,165.359 334.331,295.179 547.846,405.359 507.847,474.641 305.67,344.82 92.153,234.641 "/>
+        <polygon points="92.154,405.359 305.67,295.179 507.847,165.359 547.846,234.64 334.33,344.82 132.153,474.641 "/>
+      </svg>
+    </a>
+`
+}
 
 function loadButton (name, familyID, seqinID='') { return `
 <a class="btn load" href="javascript:SEQINALYSIS.load('${familyID}','${seqinID}');void(0)" title="Load ${name}">

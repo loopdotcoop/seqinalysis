@@ -18,7 +18,7 @@ Built by Rich Plastow and Monty Anderson for Loop.Coop.
 App
 ---
 + __Last update:__  2017/07/19
-+ __Version:__      0.0.2
++ __Version:__      0.0.3
 
 
 Tested
@@ -34,3 +34,4 @@ Changelog
 ---------
 + 0.0.1       Moved from seqin-r1ma/support/usage.html; Basic functional save()
 + 0.0.2       example/custom-directory.html - useful for Seqin development
++ 0.0.3       Simpler example/custom-directory.html avoids COS and iframe issues

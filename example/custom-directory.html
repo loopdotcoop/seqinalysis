@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en-GB" style="padding:0;margin:0;height:100%">
+<html lang="en-GB">
 <head>
 
 <!-- Technical meta -->
@@ -9,11 +9,29 @@
 
 <!-- Search engine meta -->
 <title>Seqinalysis: Custom Directory Example</title>
-<meta name="description" content="Example of how to use Seqinalysis with your own custom SEQIN.directory">
+<meta name="description" content="Example of how to use Seqinalysis with your own custom seqin-directory">
 <link rel="author" href="../README.md">
 
+<!-- Usage: `LERT("Some alert message here!")` -->
+<script>!function(s){var A='addEventListener',L='LERT',S='setAttribute',t=top,
+w=this,d=document,u=navigator.userAgent,n=0,p,i,c,e=function(m,f,l){if(l!=+l)l
+=m.lineno,f=m.filename,m=m.message;for(i=0,c=w;c=c[['LIFE','pop','is','ready']
+[i++]];);(4<i&&w.LIFE.pop.warn||t[L])((f+':'+l).match(/[^\/]+?\/?[^\/]+$/)[0]+
+'\n'+m)};/efox\/(\d|[1-2]\d)\.|Prest/.test(u)?w.onerror=e:!/SIE 9/.test(u)&&w[
+A]?w[A]('error',e,0):w.attachEvent('onerror',e);w[L]=t[L]=t[L]||function(h){h=
+98<++n?'99!':n+' '+h;99<n?0:d.body?(p=d.createElement('TT'),p.innerHTML=h,(p.
+style[S]?p.style[S]('cssText',s):p[S]('style',s)),p.onclick=function(){d.body.
+removeChild(this)},d.body.appendChild(p)):alert(h)}}('position:fixed!importa'+
+'nt;position:absolute;display:block;top:40%;left:5%;width:90%;font-size:14px'+
+';padding:9px;margin-left:-9px;background:tan;color:#603;z-index:99')</script>
+
+<!-- Fonts and CSS -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Podkova:600">
+<link rel="stylesheet" href="https://rawgit.com/loopdotcoop/seqinalysis/master/seqinalysis.css">
+
+<!-- Define our custom seqin-directory -->
 <script>
-window.SEQIN = window.SEQIN || {}
+window.SEQIN = {}
 window.SEQIN.directory = {
 
     //// The base ‘Seqin’ class.
@@ -37,7 +55,7 @@ window.SEQIN.directory = {
           , HELP: 'The base class for all mathematical Seqins. It’s not usually used directly - it just generates silent buffers.'
         }
       , myma: {
-            CDN: 'example/MyLocalMathSeqin.js'
+            CDN: './MyLocalMathSeqin.js'
           , META: {
                 NAME: 'MyLocalMathSeqin'
               , ID: 'myma'
@@ -50,9 +68,22 @@ window.SEQIN.directory = {
 }
 </script>
 
+<!-- Load the seqin-si base class, and the main Seqinalysis app -->
+<script src="https://rawgit.com/loopdotcoop/seqin-si/master/Seqin.js"></script>
+<script src="https://rawgit.com/loopdotcoop/seqinalysis/master/seqinalysis.js"></script>
+
 </head>
-<body style="padding:0;margin:0;height:100%">
-<iframe id="seqinalysis" width="100%" height="100%"
-  src="../index.html?myma_0=txMyLocalMathSeqin+cc1+sr23400+sb2340&myma_0_0=txmyma_0_0+bc1+cb20+ve5+re255+gr0+bl128+pka+ekA"></iframe>
+<body>
+
+<h1>Custom Directory Example</h1>
+
+<!-- Container for the Seqinalysis app -->
+<div id="seqinalysis"></div>
+
+<!-- Initialise Seqinalysis -->
+<script>
+SEQINALYSIS.init({})
+</script>
+
 </body>
 </html>
