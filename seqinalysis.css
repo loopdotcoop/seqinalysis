@@ -1,20 +1,31 @@
+html {
+    overflow-x: hidden;
+    overflow-y: scroll;
+}
+html, body {
+    width: 100%;
+    padding: 0;
+    margin: 0;
+}
 body {
-    margin: 8px;
     font-size: 125%; /* 1em = 20px */
     font-family: Arial, sans-serif;
     background: #0c1820;
-    color: #eee;
+    color: #caf;
 }
 @media (min-height: 800px) and (min-width: 1000px) {
     body { font-size: 187.5%; }
 }
 h1 {
-    margin-bottom: 0;
+    margin: 8px 8px 0 0;
     float: right;
     font-family: Podkova, Arial, sans-serif;
     font-size: 1em;
     letter-spacing: 1px;
 }
+
+
+
 
 /* LINKS AND BUTTONS */
 a {
@@ -34,59 +45,72 @@ a:hover {
     color: #f09;
 }
 
-nav .btn {
+nav a.btn {
     width: 2em;
 }
 .btn {
     display: inline-block;
     margin-bottom: 0.2em;
     background: rgba(0,0,0,0.3);
-    border: 0.1em solid rgba(153,102,255,0.5);
+    border: 2px solid rgba(153,102,255,0.5);
     border-radius: 0.2em;
     text-align: center;
-    transition: background 0.6s, border-color 0.3s, color 0.15s;
+    transition: background 0.6s, border-color 0.3s, color 0.15s, opacity 0.4s;
 }
-.btn:focus {
+a.btn:focus {
     border-color: #caf;
     background: rgba(0,0,0,1);
 }
-.btn:active,
-.btn.pressed {
+a.btn:active,
+a.btn.pressed {
     border-color: #fff;
     background: rgba(0,0,0,0);
 }
-.btn:hover {
+a.btn:hover {
     border-color: #f09;
     background: rgba(0,0,0,1);
 }
-.btn svg {
+a.btn svg {
     width: 32px;
     height: 32px;
     margin-top: 5px;
 }
-.btn svg >* {
+a.btn svg >* {
     fill: #a8f;
     transition: fill 0.15s;
 }
-.btn:focus svg >* {
+a.btn:focus svg >* {
     fill: #caf;
 }
-.btn:active svg >*,
-.btn.pressed svg >* {
+a.btn:active svg >*,
+a.btn.pressed svg >* {
     fill: #fff;
 }
-.btn:hover svg >* {
+a.btn:hover svg >* {
     fill: #f09;
 }
 
 
 
 
+#seqinalysis {
+    /*margin: 0 0 0 8px;*/
+}
+#seqinalysis nav {
+    margin: 16px 0 0 8px;
+    float: left;
+}
+
+
+
+
 /* .layered-visualiser */
+#seqinalysis .layered-visualiser-wrap {
+    margin: 0.4em 0 0.4em 0;
+    background: #000;
+}
 #seqinalysis canvas.layered-visualiser { /* seqinalysis.js will set the width and height */
-    margin-top: 0.5em;
-    background: rgba(0,0,0,0.5);
-    border-radius: 0.4em 0.4em 0 0;
+    transition: width 0.3s, height 0.3s;
 }
 
 
@@ -94,78 +118,138 @@ nav .btn {
 
 /* .shared-cache-visualiser */
 #seqinalysis .shared-cache-visualiser {
-    margin-bottom: 0.2em;
-    background: rgba(0,0,0,0.5);
-    height: 130px;
-    border-radius: 0 0 0.4em 0.4em;
+    height: 0;
+    margin-bottom: 8px;
+    background: #000;
+    overflow: hidden;
+}
+body.show-cache #seqinalysis .shared-cache-visualiser {
+    height: 390px;
+}
+#seqinalysis .shared-cache-visualiser h4 {
+    margin: 0;
+    padding: 8px;
+    font-size: 0.8em;
+}
+#seqinalysis .shared-cache-visualiser >div {
+    max-height: 120px;
+    overflow: hidden;
 }
 #seqinalysis figure {
     display: inline-block;
     margin: 8px 0 8px 8px;
 }
+#seqinalysis figure canvas {
+    height: 100px; /* width set by seqinalysis.js */
+    transition: width 0.3s;
+}
+#seqinalysis figure.show a.btn {
+    border-radius: 0.2em 0.2em 0.2em 0;
+}
 #seqinalysis caption {
-    visibility: hidden;
     position: absolute;
-    margin-top: -100px;
-    padding: 0.4em;
-    background: rgba(0,0,0,0.9);
+    visibility: hidden;
+    margin-top: -6px;
+    padding: 0 6px 4px 6px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: '...';
+    background: #000;
+    border-radius: 0 0 0.4em 0.4em;
+    border: 2px solid rgba(153,102,255,0.5);
+    border-top-width: 0;
     font: 0.5em monaco, 'Lucida Console', monospace;
     color: #edf;
     opacity: 0;
-    transition: opacity 0.5s, visibility 0.5s 0s;
-}
-#seqinalysis figure.show caption {
-    visibility: visible;
-    opacity: 1;
-    transition: opacity 0.5s;
-}
-#seqinalysis nav {
-    margin-top: 0.5em;
-    float: left;
-}
-
-
-
-
-/* .list-wrap */
-#seqinalysis .list-wrap {
-    width: 16rem;
-    margin-bottom: 0.2em;
-    padding: 0.1em 0.5em 0.8em;
-    background: rgba(0,0,0,0.5);
-    border-radius: 0.4em;
-}
-#seqinalysis .list-wrap >* {
-    font-size: 0.75em;
-}
-#seqinalysis .list-wrap h4 {
-    margin: 0.6em 0 0 0;
-}
-#seqinalysis .list-wrap p {
-    margin: 0.6em 0 0.6em 1em;
+    z-index: 99;
+    transition: opacity 0.5s, visibility 0.5s 0s, border-color 0.3s;
 }
 @media (min-height: 800px) and (min-width: 1000px) {
-    #seqinalysis .list-wrap p {
-        margin: 0.4em 0 0.2em 1em;
+    #seqinalysis caption {
+        margin-top: -8px;
     }
 }
-#seqinalysis .list-wrap a {
-    float: right;
+#seqinalysis figure.show caption {
+    visibility: hidden;
+    opacity: 1;
+    transition: opacity 0.5s, border-color 0.3s;
 }
-#seqinalysis .list-wrap a.btn {
-    width: 1.5em;
-    margin-bottom: 0;
+body.show-cache #seqinalysis figure.show caption {
+    visibility: visible;
 }
-#seqinalysis .list-wrap a.btn svg {
-    width: 20px;
-    height: 20px;
-    margin-top: 0;
+#seqinalysis a.btn:focus + caption {
+    border-color: #caf;
+}
+#seqinalysis a.btn:active + caption,
+#seqinalysis a.btn.pressed + caption {
+    border-color: #fff;
+}
+#seqinalysis a.btn:hover + caption {
+    border-color: #f09;
+}
+
+#seqinalysis .single-waveform-cache figure canvas {
+    /*background: red;*/
+}
+#seqinalysis .oscillation-cache {
+    /*background: green;*/
+}
+#seqinalysis .gain-envelope-cache {
+    /*background: blue;*/
 }
 
 
 
 
 /* .seqin-directory */
+#seqinalysis .seqin-directory {
+    position: absolute;
+    width: 250px;
+    margin-top: 0.4em;
+    margin-left: -8px;
+    background: #000;
+    max-width: 0;
+    overflow: hidden;
+    transition: max-width 0.3s;
+}
+body.show-directory #seqinalysis .seqin-directory {
+    max-width: 250px;
+}
+#seqinalysis .layered-visualiser-wrap,
+#seqinalysis .shared-cache-visualiser,
+#seqinalysis .seqin-instances {
+    transition: transform 0.3s, height 0.3s;
+}
+body.show-directory #seqinalysis .layered-visualiser-wrap,
+body.show-directory #seqinalysis .shared-cache-visualiser,
+body.show-directory #seqinalysis .seqin-instances {
+    transform: translateX(255px);
+}
+#seqinalysis .seqin-directory >div {
+    width: 234px;
+    padding: 0 8px 8px 8px;
+}
+#seqinalysis .seqin-directory >* {
+    font-size: 18px;
+}
+#seqinalysis .seqin-directory h4 {
+    margin: 0.6em 0 0 0;
+}
+#seqinalysis .seqin-directory p {
+    margin: 0.6em 0 0.6em 1em;
+}
+#seqinalysis .seqin-directory a {
+    float: right;
+}
+#seqinalysis .seqin-directory a.btn {
+    width: 1.5em;
+    margin-bottom: 0;
+}
+#seqinalysis .seqin-directory a.btn svg {
+    width: 20px;
+    height: 20px;
+    margin-top: 0;
+}
 #seqinalysis .seqin-directory .not-loaded {
     color: #888;
 }
@@ -189,7 +273,65 @@ nav .btn {
 
 
 
-/* .seqin-directory */
+/* .seqin-instances */
+#seqinalysis .seqin-instances {
+}
+#seqinalysis .seqin-instances >h4#no-instances {
+    font-size: 0.8em;
+    background: #000;
+    padding: 8px;
+}
+#seqinalysis .seqin-instances >div {
+    margin-bottom: 8px;
+    background: #000;
+    font-size: 18px;
+}
+#seqinalysis .seqin-instances >div >* {
+    display: inline-block;
+    margin: 0 0 0 8px;
+    padding: 8px 0 0 0;
+    width: 124px;
+}
+#seqinalysis .seqin-instances >div span,
+#seqinalysis .seqin-instances >div .play {
+    width: 105px;
+    padding: 16px 6px;
+    margin: 0;
+    border-width: 4px;
+    border-style: solid;
+    border-radius: 0.4em;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: '...';
+}
+#seqinalysis .seqin-instances a {
+    color: rgba(255,255,255,0.7);
+    opacity: 0.8;
+}
+#seqinalysis .seqin-instances a:focus {
+    color: #fff;
+}
+#seqinalysis .seqin-instances a:active,
+#seqinalysis .seqin-instances a.pressed {
+    color: #fff;
+    opacity: 1;
+}
+#seqinalysis .seqin-instances a:hover {
+    color: rgba(255,255,255,0.85);
+    opacity: 1;
+}
+#seqinalysis .seqin-instances a.btn svg {
+    width: 24px;
+    height: 24px;
+    margin: 4px 0 0 0;
+    padding: 0 5px;
+}
+#seqinalysis .seqin-instances >div .add,
+#seqinalysis .seqin-instances >div .edit {
+}
+#seqinalysis .seqin-instances >div .close {
+    float: right;
+}
 #seqinalysis .seqin-instances .has-perform-btns h4 .edit.btn {
     display: none;
 }

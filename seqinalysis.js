@@ -9,7 +9,8 @@ const
 
 let instances = {}, performBtns = [], performances = []
   , $out, $nav, $layered, layeredCanvasCtx, audioCtx
-  , $sharedCache, $seqinDirectory, $seqinInstances
+  , $sharedCache, $singleWaveformCache, $oscillationCache, $gainEnvelopeCache
+  , $seqinDirectory, $seqinInstances
   , maxPerformanceSamples = 0
   , layeredWidth = ROOT.innerWidth - 16 // `-16` for 8px margins on each side
   , layeredHeight = 800 < ROOT.innerHeight ? 200 : 100
@@ -66,22 +67,9 @@ ROOT.SEQINALYSIS = {
         $nav.innerHTML = navButtons()
         $out.appendChild($nav)
 
-        //// Create a canvas to visualise performances layered on top of each other.
-        $layered = d.createElement('canvas')
-        $layered.className = 'layered-visualiser'
-        $layered.width = layeredWidth
-        $layered.height = layeredHeight
-        $out.appendChild($layered)
-        layeredCanvasCtx = $layered.getContext('2d')
-
-        //// Create a container to visualise the sharedCache.
-        $sharedCache = d.createElement('div')
-        $sharedCache.className = 'shared-cache-visualiser'
-        $out.appendChild($sharedCache)
-
-        //// Create a container to show what Seqins are available to load.
+        //// Create a directory of Seqins which are available to load.
         $seqinDirectory = d.createElement('div')
-        $seqinDirectory.className = 'seqin-directory list-wrap'
+        $seqinDirectory.className = 'seqin-directory'
         for (let familyID in ROOT.SEQIN.directory) {
             if ('CDN' == familyID || 'META' == familyID) continue
             let family = ROOT.SEQIN.directory[familyID]
@@ -108,16 +96,54 @@ ROOT.SEQINALYSIS = {
             }
             $seqinDirectory.appendChild($family)
         }
-        $out.appendChild($seqinDirectory)
+        $nav.appendChild($seqinDirectory)
+
+        //// Create a canvas to visualise performances layered on top of each other.
+        const $clearBoth = d.createElement('div')
+        $clearBoth.style.clear = 'both'
+        $out.appendChild($clearBoth)
+
+        //// Create a canvas to visualise performances layered on top of each other.
+        const $layeredWrap = d.createElement('div')
+        $layeredWrap.className = 'layered-visualiser-wrap'
+        $layeredWrap.height = layeredHeight
+        $layered = d.createElement('canvas')
+        $layered.className = 'layered-visualiser'
+        $layered.width = layeredWidth
+        $layered.style.width = layeredWidth + 'px'
+        $layered.height = layeredHeight
+        $layered.style.height = layeredHeight + 'px'
+        $layeredWrap.appendChild($layered)
+        $out.appendChild($layeredWrap)
+        layeredCanvasCtx = $layered.getContext('2d')
+
+        //// Create a container to visualise the sharedCache.
+        $sharedCache = d.createElement('div')
+        $sharedCache.innerHTML = '<h4 id="empty-cache">(The cache is empty)</h4>'
+        $sharedCache.className = 'shared-cache-visualiser'
+        $singleWaveformCache = d.createElement('div')
+        $singleWaveformCache.className = 'single-waveform-cache'
+        $sharedCache.appendChild($singleWaveformCache)
+        $oscillationCache = d.createElement('div')
+        $oscillationCache.className = 'oscillation-cache'
+        $sharedCache.appendChild($oscillationCache)
+        $gainEnvelopeCache = d.createElement('div')
+        $gainEnvelopeCache.className = 'gain-envelope-cache'
+        $sharedCache.appendChild($gainEnvelopeCache)
+        $out.appendChild($sharedCache)
 
         //// Create a container to show which Seqins have been instantiated.
         $seqinInstances = d.createElement('div')
-        $seqinInstances.className = 'seqin-instances list-wrap'
+        $seqinInstances.className = 'seqin-instances'
         updateSeqinInstances()
         $out.appendChild($seqinInstances)
 
         //// Set up audio.
         audioCtx = new (ROOT.AudioContext||ROOT.webkitAudioContext)()
+
+        //// By default, show the cache and directory. This may be overridden by
+        //// a save-link in the query string, below.
+        $('body').classList.add('show-cache', 'show-directory')
 
         //// Deal with a save-link in the query string.
         if (ROOT.location.search) {
@@ -126,16 +152,21 @@ ROOT.SEQINALYSIS = {
             const toInstantiate = {}
             const toAddButton = {}
             ROOT.location.search.slice(1).split('&').forEach( parts => {
-                const [ id, configString ] = parts.split('=')
+                const [ id, value ] = parts.split('=')
                 parts = id.split('_')
-                if (2 === parts.length) { // defines an instance
+                if (1 === parts.length) { // defines a user-preference
+                    if ('hide' === parts[0]) {
+                        $('body').classList.remove('show-'+value)
+                        if ('directory' === value) setTimeout(resize, 100)
+                    }
+                } else if (2 === parts.length) { // defines an instance
                     const seqin = parts[0]
                     const family = seqin.slice(-2)
                     toLoadSecond[seqin] = 1 // eg 'r1ma'
                     toLoadFirst[family] = 1 // eg 'ma'
-                    toInstantiate[id] = configString
+                    toInstantiate[id] = value // `value` is a configString
                 } else {
-                    toAddButton[id] = configString
+                    toAddButton[id] = value // `value` is a configString
                 }
             })
             initLoadFirst(toLoadFirst)
@@ -151,7 +182,7 @@ ROOT.SEQINALYSIS = {
                 const key = $button.getAttribute('data-key')
                 if (! key) return
     			if (key === evt.key) $button.click()
-                if ( key === evt.key || ('Enter' === evt.key && d.activeElement === $button) ) {
+                if ( key === evt.key || ('enter' === evt.key && d.activeElement === $button) ) {
                     const c = $button.classList
                     if (! c.contains('pressed') ) {
                         c.add('pressed')
@@ -162,16 +193,12 @@ ROOT.SEQINALYSIS = {
             })
 		})
 
-        //// Deal with window size change.
-		ROOT.addEventListener('resize', evt => {
-            layeredWidth = ROOT.innerWidth - 16
-            layeredHeight = 800 < ROOT.innerHeight ? 200 : 100
-            $layered.width = layeredWidth
-            $layered.height = layeredHeight
-            updateLayeredVisualiser()
-		})
+        //// Deal with window size change, and make sure the current window size
+        //// (eg after 'show-directory') is taken into account.
+		ROOT.addEventListener('resize', resize)
+        resize()
 
-    }
+    }//init()
 
 
     //// Xx.
@@ -214,7 +241,7 @@ ROOT.SEQINALYSIS = {
         //// Again, only needed when an addButtonButton() is clicked.
         if (null == config) {
             config = {
-                samplesPerBuffer: 600
+                samplesPerBuffer: 2900
               , channelCount:     1
               , text:             id
             }
@@ -259,6 +286,20 @@ ROOT.SEQINALYSIS = {
     }
 
 
+    //// Xx.
+  , closeInstance: (instanceID) => {
+        performBtns = performBtns.filter(
+            performBtn => instanceID+'_' !== performBtn.id.slice(0, instanceID.length+1)
+        )
+        delete instances[instanceID]
+        const $el = $(`#instance-${instanceID}`)
+        $el.parentNode.removeChild($el)
+        console.log(instances, performBtns);
+        updateSeqinInstances()
+        return false
+    }
+
+
     //// A button generates and plays a performance, and draws its waveform.
   , addButton: (instanceID, id, config) => { // `id` and `config` are optional, used by initAddButton()
 
@@ -280,9 +321,9 @@ ROOT.SEQINALYSIS = {
             config = {
                 id // id
               , text: id // tx
-              , bufferCount: 1 // bc
-              , cyclesPerBuffer: 4 // cb
-              , velocity: 5 // ve
+              , bufferCount: 3 // bc
+              , cyclesPerBuffer: 20 // cb
+              , velocity: 7 // ve
               , red: colorScheme[0] // re
               , green: colorScheme[1] // gr
               , blue: colorScheme[2] // bl
@@ -296,15 +337,20 @@ ROOT.SEQINALYSIS = {
         config.$el = d.createElement('p')
 
         //// Create the play-button.
+        const borderColor = `rgb(${config.red||0},${config.green||0},${config.blue||0})`
+        const bkgndColor  = `rgb(${~~config.red/2||0},${~~config.green/2||0},${~~config.blue/2||0})`
         const $playBtn = d.createElement('a')
         $playBtn.className = 'play btn'
+        $playBtn.style.borderColor = borderColor
+        $playBtn.style.backgroundColor = bkgndColor
         $playBtn.href = 'javascript:void(0)'
         if (config.playKey) $playBtn.setAttribute('data-key', config.playKey)
-        $playBtn.innerHTML =
-`<svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640">
-    <polygon points="160,160 160,560 520,360 "/>
-</svg>
-`
+        $playBtn.innerHTML = config.text
+//         $playBtn.innerHTML =
+// `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640">
+//     <polygon points="160,160 160,560 520,360 "/>
+// </svg>`
+
         //// Create the edit-button.
         const $editBtn = d.createElement('a')
         $editBtn.className = 'edit btn'
@@ -320,12 +366,21 @@ ROOT.SEQINALYSIS = {
 </svg>
 `
 
+        //// Create the close-button.
+        const $closeBtn = d.createElement('a')
+        $closeBtn.className = 'close btn'
+        $closeBtn.href = 'javascript:void(0)'
+        $closeBtn.innerHTML =
+`<svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640">
+<rect x="40" y="280" transform="matrix(0.7071 -0.7071 0.7071 0.7071 -132.5485 320.0001)" width="560" height="80"/>
+<rect x="40" y="280" transform="matrix(0.7071 0.7071 -0.7071 0.7071 320 -132.5479)" width="560" height="80"/>
+</svg>
+`
+
         //// Create the main element.
-        const color = `rgb(${config.red||0},${config.green||0},${config.blue||0})`
-        config.$el.innerHTML = config.text
         config.$el.appendChild($playBtn)
         config.$el.appendChild($editBtn)
-        config.$el.style.color = color
+        config.$el.appendChild($closeBtn)
 
         performBtns.push(config)
 
@@ -342,8 +397,9 @@ ROOT.SEQINALYSIS = {
               , cyclesPerBuffer: config.cyclesPerBuffer
               , isLooping: false
               , events: [
-                    { at:0 , down:config.velocity }
-                  , { at:20, down:0 }
+                    { at:500 , down:config.velocity }
+                //   , { at:14000, down:0 }
+                  , { at:7000, down:0 }
                 ]
               , meta: config
             }).then( buffers => {
@@ -379,10 +435,26 @@ ROOT.SEQINALYSIS = {
             return false
         })
 
+
+        //// Deal with a close-button click.
+        $closeBtn.addEventListener('click', evt => {
+            evt.preventDefault()
+            performBtns = performBtns.filter(
+                performBtn => config.id !== performBtn.id
+            )
+            config.$el.parentNode.removeChild(config.$el)
+            updateSeqinInstances()
+            return false
+        })
+
     }
 
   , save: () => {
         const query = []
+        if (! $('body').classList.contains('show-cache') )
+            query.push('hide=cache')
+        if (! $('body').classList.contains('show-directory') )
+            query.push('hide=directory')
         for (let instanceID in instances) {
             const instance = instances[instanceID]
             let configString = instance.configString
@@ -412,24 +484,37 @@ ROOT.SEQINALYSIS = {
 
   , scrollBy: by => {
         scroll += by
-        // scroll = Math.max( Math.min(scroll, layeredWidth), 0) // clamp @TODO fix this
+        scroll = Math.max(scroll, 0) // clamp @TODO fix this
         updateLayeredVisualiser()
     }
 
   , zoomTo: to => {
+        const oldZoom = zoom
         zoom = 0 !== to ? to : maxPerformanceSamples / layeredWidth // zero means 'show the entire waveform'
+        scroll *= (zoom / oldZoom)
         // zoom = Math.max( Math.min(zoom, 16), 0.05) // clamp @TODO fix this
         updateLayeredVisualiser()
     }
 
   , zoomBy: by => {
         zoom *= by
+        scroll *= by
         // zoom = Math.max( Math.min(zoom, 16), 0.05) // clamp @TODO fix this
         updateLayeredVisualiser()
     }
 
+  , toggleCache: () => {
+        $('body').classList.toggle('show-cache')
+    }
+
+  , toggleDirectory: () => {
+        $('body').classList.toggle('show-directory')
+        setTimeout(resize, 100)
+    }
+
   , clearPerformances: () => {
         performances = []
+        maxPerformanceSamples = 0
         updateLayeredVisualiser()
     }
 
@@ -447,48 +532,110 @@ function updateLayeredVisualiser () {
     //// Delete the previous visualisation.
 	layeredCanvasCtx.clearRect(0, 0, $layered.width, $layered.height)
 
+    ////
+    const
+        xPerFrame = layeredWidth / maxPerformanceSamples * zoom
+
 	//// Draw each performance’s buffers.
     performances.forEach( (performance,i) => {
+
+        const
+            ctx = layeredCanvasCtx
+          , bufferLength = performance.buffers[0].data.length
+          , red = performance.config.red, green = performance.config.green, blue = performance.config.blue
+          , y = layeredHeight * 0.5 // mid-height
+
+            //// When zoomed in, interleave each waveform’s line.
+          , xOffset = (1 >= xPerFrame ? 0 : (i % performances.length) * xPerFrame / performances.length)
+
+
+        //// Set fill-style for drawing the buffer margins.
+        const marginFillColor = ctx.createLinearGradient(0,0, 0,layeredHeight) // x0, y0, x1, y1
+        marginFillColor.addColorStop(0.0, `rgba(${red||0},${green||0},${blue||0},0.3)`)
+        marginFillColor.addColorStop(0.2, `rgba(${red||0},${green||0},${blue||0},0.1)`)
+        marginFillColor.addColorStop(0.8, `rgba(${red||0},${green||0},${blue||0},0.1)`)
+        marginFillColor.addColorStop(1.0, `rgba(${red||0},${green||0},${blue||0},0.3)`)
 
     	//// Draw each buffer’s waveform.
         performance.buffers.forEach( (buffer,j) => {
 
-            //// Draw a filled shape.
-            const
-        	    channelBuffer = buffer.data.getChannelData(0)
-              , xPerFrame = layeredWidth / maxPerformanceSamples * zoom
-
-                //// When zoomed in, interleave each waveform’s line.
-              , xOffset = (1 >= xPerFrame ? 0 : (i % performances.length) * xPerFrame / performances.length)
-
-                //// Set the waveform colour.
-              , fillColor = layeredCanvasCtx.createLinearGradient(0,0, 0,layeredHeight)
-              , red = performance.config.red, green = performance.config.green, blue = performance.config.blue
-
-            ////
-            const outerAlpha = (j % 2) ? 0.2 : 1
-            const innerAlpha = (j % 2) ? 1 : 0.2
-            fillColor.addColorStop(0.0, `rgba(${red||0},${green||0},${blue||0},${outerAlpha})`)
-            fillColor.addColorStop(0.5, `rgba(${red||0},${green||0},${blue||0},${innerAlpha})`)
-            fillColor.addColorStop(1.0, `rgba(${red||0},${green||0},${blue||0},${outerAlpha})`)
-            layeredCanvasCtx.fillStyle = fillColor
-
             //// Step through each x position of the layered-canvas.
-            let draws = 0
-            for ( let x=xOffset; x<layeredWidth; x+=Math.max(xPerFrame,1) ) {
-                const sampleValue = channelBuffer[ Math.floor((x + scroll) / xPerFrame) - (channelBuffer.length * j) ]
-                if (null == sampleValue) continue // no data-point here @TODO loops should jump straight in at first data-point, and then `break` when hitting the end
-                layeredCanvasCtx.fillRect(
-                    x                                // x position
-                  , layeredHeight * 0.5                         // y position
-                  , 1                                           // width
-                  , sampleValue * layeredHeight * -0.5 // height
-                )
-                draws++
+        	const channelBuffer = buffer.data.getChannelData(0)
+            let drawnLeftEdge = false
+            let x = xOffset
+            for (; x<layeredWidth; x+=Math.max(xPerFrame,1) ) {
+                const samplePosition = Math.floor((x + scroll) / xPerFrame) - (bufferLength * j)
+                if (0 > samplePosition) continue // @TODO loops should jump straight in at first data-point
+                const sampleValue = channelBuffer[samplePosition]
+                if (null == sampleValue) break // reached the end of the buffer
+
+                //// Draw the left edge of every buffer.
+                if (! drawnLeftEdge) {
+                    ctx.fillStyle = marginFillColor
+                    ctx.fillRect(x, 0, 2, layeredHeight) // x, y, width, height
+                    // ctx.moveTo(x, 0)
+                    // ctx.lineTo(x, layeredHeight)
+                    // ctx.stroke()
+                    drawnLeftEdge = true
+                }
+
+                //// Set the waveform colour and draw the line.
+                const
+                    h = sampleValue * layeredHeight * -0.5
+                  , fillColor = ctx.createLinearGradient(0,y, 0,y+h) // x0, y0, x1, y1
+                fillColor.addColorStop(0.0, `rgba(${red||0},${green||0},${blue||0},0.2)`)
+                fillColor.addColorStop(1.0, `rgba(${red||0},${green||0},${blue||0},1)`)
+                ctx.fillStyle = fillColor
+                ctx.fillRect(x, y, 1, h) // x, y, width, height
+            }
+
+            //// Draw the right edge of the rightmost buffer.
+            ctx.fillStyle = marginFillColor
+            ctx.fillRect(x, 0, 2, layeredHeight) // x, y, width, height
+
+        })
+
+        //// Set the styles for drawing the ADSR envelope.
+        ctx.fillStyle = `rgba(${red||0},${green||0},${blue||0},0.5)`
+        ctx.strokeStyle = `rgba(${red||0},${green||0},${blue||0},0.8)`
+        ctx.lineJoin = 'round'
+        ctx.lineWidth = 3
+        ctx.beginPath()
+
+    	//// Draw the ADSR envelope shape.
+        performance.buffers.envelopeNodes.forEach( (node,j) => {
+            const
+                x = node.at * xPerFrame - scroll
+              , y = (layeredHeight - 8) * (9 - node.level) / 9 + 4
+
+            if (0 === j) {
+                ctx.moveTo(x, y)
+            } else {
+                ctx.lineTo(x, y)
+                ctx.stroke()
             }
         })
+
+    	//// Draw each ADSR node as a circle.
+        ctx.beginPath()
+        performance.buffers.envelopeNodes.forEach( (node,j) => {
+            const
+                x = node.at * xPerFrame - scroll
+              , y = (layeredHeight - 8) * (9 - node.level) / 9 + 4
+
+            ctx.moveTo(x, y)
+
+            ctx.arc(
+                x           // x position
+              , y           // y position
+              , 8           // radius
+              , 0           // start angle
+              , 2 * Math.PI // end angle (in radians)
+            )
+            ctx.fill()
+        })
     })
-}
+}//updateLayeredVisualiser()
 
 
 function updateSharedCacheVisualiser () {
@@ -506,38 +653,103 @@ function updateSharedCacheVisualiser () {
           , $link = d.createElement('a')
           , $caption = d.createElement('caption')
           , $cacheCanvas = d.createElement('canvas')
+          , xScale = 2000 > cache.length ? 1 : 2000 / cache.length
 
         //// HTML
         $figure.id = cacheId
         $link.className = 'btn'
-        $link.href = 'javascript:void(0)'
-        $link.addEventListener('click', evt => {
-             const isShowing = $figure.classList.contains('show')
-             Array.from( $$('.shared-cache-visualiser figure.show') ).forEach(
-                 $figure => $figure.classList.remove('show') )
-             if (! isShowing) $figure.classList.add('show')
-        })
-        $cacheCanvas.width = cache.length
+        $cacheCanvas.width = cache.length * xScale
         $cacheCanvas.height = 100
         $link.appendChild($cacheCanvas)
         $figure.appendChild($link)
         $figure.appendChild($caption)
         $caption.innerHTML = cacheId
-        $sharedCache.appendChild($figure)
+
+        ////
+        let className
+        if ( 0 < cacheId.indexOf('_SW_') ) {
+            $singleWaveformCache.appendChild($figure)
+            className = 'single-waveform-cache'
+        } else if ( 0 < cacheId.indexOf('_OS_') ) {
+            $oscillationCache.appendChild($figure)
+            className = 'oscillation-cache'
+        } else if ( 0 < cacheId.indexOf('_GE_') ) {
+            $gainEnvelopeCache.appendChild($figure)
+            className = 'gain-envelope-cache'
+        } else
+            throw new Error('cache has unexpected ID')
+
+        //// Click handler.
+        $link.href = 'javascript:void(0)'
+        $link.addEventListener('click', evt => {
+            const isShowing = $figure.classList.contains('show')
+            Array.from( $$(`.${className} figure.show`) ).forEach(
+                $figure => $figure.classList.remove('show') )
+            if (! isShowing)
+                $figure.classList.add('show')
+            updateSharedCacheVisualiser()
+        })
 
         //// Draw the cached waveform.
-        const
-            cacheCanvasCtx = $cacheCanvas.getContext('2d')
-          , fillColor = cacheCanvasCtx.createLinearGradient(0,0, 0,100)
-          , red = cache.meta.red, green = cache.meta.green, blue = cache.meta.blue
-        fillColor.addColorStop(0.0, `rgba(${red||0},${green||0},${blue||0},1)`)
-        fillColor.addColorStop(0.5, `rgba(${red||0},${green||0},${blue||0},0.3)`)
-        fillColor.addColorStop(1.0, `rgba(${red||0},${green||0},${blue||0},1)`)
-        cacheCanvasCtx.fillStyle = fillColor
-        for (let frame=0; frame<cache.length; frame++) {
-            cacheCanvasCtx.fillRect(frame,50, 1,channelBuffer[frame] * -50) // x,y,w,h
+        const cacheCanvasCtx = $cacheCanvas.getContext('2d')
+            , red = cache.meta.red, green = cache.meta.green, blue = cache.meta.blue
+        for (let x=0; x<Math.min(2000,cache.length); x++) {
+            const
+                y = 50
+              , h = channelBuffer[ Math.floor(x / xScale) ] * -50
+              , fillColor = cacheCanvasCtx.createLinearGradient(0,y, 0,y+h) // x0, y0, x1, y1
+            fillColor.addColorStop(0.0, `rgba(${red||0},${green||0},${blue||0},0.2)`)
+            fillColor.addColorStop(1.0, `rgba(${red||0},${green||0},${blue||0},1)`)
+            cacheCanvasCtx.fillStyle = fillColor
+            cacheCanvasCtx.fillRect(x, y, 1, h) // x, y, width, height
         }
+
+        if ('gain-envelope-cache' === className) {
+
+            //// Set the styles for drawing the ADSR envelope.
+            cacheCanvasCtx.fillStyle = `rgba(${red||0},${green||0},${blue||0},0.5)`
+            cacheCanvasCtx.strokeStyle = `rgba(${red||0},${green||0},${blue||0},0.8)`
+            cacheCanvasCtx.lineWidth = 3
+            cacheCanvasCtx.lineJoin = 'round'
+            cacheCanvasCtx.beginPath()
+
+        	//// Draw the ADSR envelope shape.
+            cache.reducedEnvelopeNodes.forEach( (node,j) => {
+                const
+                    x = node.at * xScale
+                  , y = (100 - 8) * (9 - node.level) / 9 + 4
+
+                if (0 === j) {
+                    cacheCanvasCtx.moveTo(x, y)
+                } else {
+                    cacheCanvasCtx.lineTo(x, y)
+                    cacheCanvasCtx.stroke()
+                }
+            })
+        }
+
     }
+
+    //// Set widths.
+    ['single-waveform-cache', 'oscillation-cache', 'gain-envelope-cache'].forEach( className => {
+        const $$canvases = Array.from( $$(`.${className} figure canvas`) )
+        const $shownCanvas = $(`.${className} figure.show canvas`)
+        const fullCanvasWidths = $$canvases.reduce( (sum, $canvas) => sum + $canvas.width + 12, 0 )
+        const canvasWidth = $shownCanvas
+          ? 10 //@TODO prevent short waveforms from sqishing down ... maybe fix `Math.max( 10, (layeredWidth - 8 - $shownCanvas.width - 12) / ($$canvases.length - 1) - 12 )`
+          : (layeredWidth - 8) / $$canvases.length - 12 // `-8` makes right-margin, `-12` accounts for canvas left-margin (8px) plus two borders (2px + 2px)
+        $$canvases.forEach( $canvas => {
+            let w = $canvas === $shownCanvas
+              ? ( layeredWidth + 2 - $$canvases.length * (canvasWidth+12) )
+              : canvasWidth
+            w = Math.min(w, $canvas.width)
+            $canvas.style.width = w + 'px'
+            $canvas.parentNode.nextSibling.style.maxWidth = (w-20) + 'px' // prevent the caption from overshooting
+        })
+    })
+
+    //// Hide or show the #empty-cache message.
+    $('#empty-cache').style.display = $$(`.shared-cache-visualiser figure`).length ? 'none' : 'block'
 }
 
 function updateSeqinInstances () {
@@ -549,7 +761,7 @@ function updateSeqinInstances () {
         if (! $instance) { // need to create it
             $instance = d.createElement('div')
             $instance.id = `instance-${instanceID}`
-            $instance.innerHTML = `<h4>${instanceID} ${addButtonButton(instanceID)} ${editInstanceButton(instanceID)}</h4>`
+            $instance.innerHTML = `<h4><span class="btn">${instanceID}</span> ${editInstanceButton(instanceID)} ${addButtonButton(instanceID)} ${closeInstanceButton(instanceID)}</h4>`
             $seqinInstances.appendChild($instance)
         }
         let performTally = 0
@@ -573,7 +785,7 @@ function updateSeqinInstances () {
     if (instanceTally) {
         if ( $('#no-instances') ) $seqinInstances.removeChild( $('#no-instances') )
     } else {
-        $seqinInstances.innerHTML = '<h4 id="no-instances">(No instances)<h4>'
+        $seqinInstances.innerHTML = '<h4 id="no-instances">(No instances)</h4>'
     }
 }
 
@@ -699,7 +911,7 @@ function navButtons () { return `
       <tt>&lt;</tt>
     </a>
 -->
-    <a class="btn" href="javascript:SEQINALYSIS.save()" data-key="$" title="Save, by creating a link [dollar $]">
+    <a class="btn" href="javascript:SEQINALYSIS.save()" data-key="$" title="Save, by creating a link [dollar]">
       <svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640">
         <path d="M78.065,363.566c-54.673,54.674-54.674,143.316,0,197.99s143.318,54.674,197.99,0l86.009-86.01
         	c0,0-26.861-1.646-52.184-7.662c-25.323-6.016-39.235-14.055-39.235-14.055l-51.16,51.158c-23.432,23.432-61.422,23.432-84.853,0
@@ -766,7 +978,24 @@ function navButtons () { return `
         <polygon points="400,600 400,540 482.857,540 400,457.144 457.143,400 540,482.857 540,400 600,400 600,600 "/>
       </svg>
     </a>
-    <a class="btn" href="javascript:SEQINALYSIS.clearPerformances()" data-key="\\" title="Clear Performances [backslash]">
+    <a class="btn" href="javascript:SEQINALYSIS.toggleCache()" data-key="[" title="Show/hide cache [opening square bracket]">
+      <svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640">
+        <rect x="80" y="80"  width="200" height="120"/>
+        <rect x="320" y="80" width="160" height="120"/>
+        <rect x="80" y="440" width="440" height="120"/>
+        <rect x="80" y="260" width="120" height="120"/>
+      </svg>
+    </a>
+    <a class="btn" href="javascript:SEQINALYSIS.toggleDirectory()" data-key="]" title="Show/hide directory [closing square bracket]">
+      <svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640">
+        <rect x="80" y="80"   width="320" height="60"/>
+        <rect x="80" y="500"  width="320" height="60"/>
+        <rect x="200" y="180" width="320" height="60"/>
+        <rect x="200" y="380" width="320" height="60"/>
+        <rect x="200" y="280" width="360" height="60"/>
+      </svg>
+    </a>
+    <a class="btn" href="javascript:SEQINALYSIS.clearPerformances()" data-key="\\" title="Clear performances [backslash]">
       <svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640">
         <path d="M320,600C165.36,600,40,474.64,40,320S165.36,40,320,40s280,125.36,280,280S474.64,600,320,600z M550,320
         	c0-127.025-102.974-230-230-230C192.975,90,90,192.975,90,320c0,127.026,102.975,230,230,230C447.026,550,550,447.026,550,320z"/>
@@ -810,14 +1039,34 @@ function editInstanceButton (instanceID) { return `
   </svg>
 </a>`
 }
-function addButtonButton (instanceID) { return `
-<a class="btn add" href="javascript:SEQINALYSIS.addButton('${instanceID}');void(0)" title="Add ${instanceID}">
+function closeInstanceButton (instanceID) { return `
+<a class="btn close" href="javascript:SEQINALYSIS.closeInstance('${instanceID}');void(0)" title="Close ${instanceID}">
   <svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640">
-    <rect x="80" y="320" width="480" height="80"/>
-    <rect x="280" y="120" width="80" height="480"/>
+    <rect x="40" y="280" transform="matrix(0.7071 -0.7071 0.7071 0.7071 -132.5485 320.0001)" width="560" height="80"/>
+    <rect x="40" y="280" transform="matrix(0.7071 0.7071 -0.7071 0.7071 320 -132.5479)" width="560" height="80"/>
+  </svg>
+</a>`
+}
+function addButtonButton (instanceID) { return `
+<a class="btn add" href="javascript:SEQINALYSIS.addButton('${instanceID}');void(0)" title="Add a performance-button to ${instanceID}">
+  <svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640">
+    <rect x="60" y="280" width="520" height="80"/>
+    <rect x="280" y="60" width="80" height="520"/>
   </svg>
 </a>`
 }
 
+
+
+function resize () {
+    layeredWidth = ROOT.innerWidth - 16 - ($('body').classList.contains('show-directory') ? 255 : 0)
+    layeredHeight = 800 < ROOT.innerHeight ? 200 : 100
+    $layered.width = layeredWidth
+    $layered.style.width = layeredWidth + 'px'
+    $layered.height = layeredHeight
+    $layered.style.height = layeredHeight + 'px'
+    updateLayeredVisualiser()
+    updateSharedCacheVisualiser()
+}
 
 }( 'object' === typeof window ? window : global )
