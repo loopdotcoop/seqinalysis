@@ -5,7 +5,7 @@
 const META = {
     NAME:    { value:'MyLocalMathSeqin' }
   , ID:      { value:'myma'           }
-  , VERSION: { value:'0.0.1'          }
+  , VERSION: { value:'0.0.2'          }
   , SPEC:    { value:'20170705'       }
   , HELP:    { value:
 `Example of how to specify a locally-hosted Seqin - great for development!` }
@@ -27,58 +27,26 @@ SEQIN.MyLocalMathSeqin = class extends SEQIN.MathSeqin {
     }
 
 
-    _buildBuffers(config, resolve, reject) {
+    //// Returns a new single-waveform buffer, filled with sample-values.
+    //// For MyLocalMathSeqin, we create a nasty sounding ‘tangent’ waveform.
+    //// Called by: perform() > _buildBuffers() > _getSingleWaveformBuffer()
+    _renderSingleWaveformBuffer (config) {
+        const samplesPerCycle = this.samplesPerBuffer / config.cyclesPerBuffer
+        const f = Math.PI * 2 / samplesPerCycle // frequency
+        const singleWaveformBuffer = this.audioContext.createBuffer(
+                this.channelCount // numOfChannels
+              , samplesPerCycle   // length
+              , this.sampleRate   // sampleRate
+            )
+        for (let channel=0; channel<this.channelCount; channel++) {
+            const singleWaveformChannel = singleWaveformBuffer.getChannelData(channel)
+            for (let i=0; i<samplesPerCycle; i++)
+                singleWaveformChannel[i] = Math.tan(i * f)
+        }
+        return Promise.resolve(singleWaveformBuffer)
+    }
 
-        //// Get empty buffers.
-        super._buildBuffers(config, buffers => {
-
-            const samplesPerCycle = this.samplesPerBuffer / config.cyclesPerBuffer
-
-            //// MyLocalMathSeqin notes are built from a single waveform.
-            const singleWaveformId =
-                'myma'                 // universally unique ID for MyLocalMathSeqin
-              + '_sw'                  // denotes a single-waveform cycle
-              + '_s'+this.sampleRate   // sample-frames per second
-              + '_c'+this.channelCount // number of channels
-              + '_l'+samplesPerCycle   // length of the waveform-cycle in sample-frames
-
-            //// No cached single-waveform? Generate it!
-            let singleWaveform = this.sharedCache[singleWaveformId]
-            if (! singleWaveform) {
-                singleWaveform = this.sharedCache[singleWaveformId] = this.audioContext.createBuffer(
-                    this.channelCount // numOfChannels
-                  , samplesPerCycle   // length
-                  , this.sampleRate   // sampleRate
-                )
-                if (config.meta) singleWaveform.meta = config.meta //@TODO should be at seqin-si level
-                const f = Math.PI * 2 * config.cyclesPerBuffer / this.samplesPerBuffer
-                for (let channel=0; channel<this.channelCount; channel++) {
-                    const singleWaveformChannel = singleWaveform.getChannelData(channel)
-                    for (let i=0; i<samplesPerCycle; i++) {
-                        singleWaveformChannel[i] = Math.sin(i * f)
-                    }
-                }
-            }
-
-            //// Create the complete audio by repeating the cached single-waveform.
-            buffers.map( buffer => {
-                buffer.id = 'myma'
-                for (let channel=0; channel<this.channelCount; channel++) {
-                    const singleWaveformChannel = singleWaveform.getChannelData(channel)
-                    const outChannelBuffer = buffer.data.getChannelData(channel)
-                    for (let i=0; i<this.samplesPerBuffer; i++) {
-                        outChannelBuffer[i] = singleWaveformChannel[i % samplesPerCycle]
-                    }//@TODO find a faster technique for duplicating audio
-                }
-            })
-
-            //// Return the filled buffers.
-            resolve(buffers)
-        })
-
-    }//_buildBuffers()
-
-}//MyLocalMathSeqin
+} // MyLocalMathSeqin
 
 
 //// Add static constants to the main class.

@@ -17,8 +17,8 @@ Built by Rich Plastow and Monty Anderson for Loop.Coop.
 
 App
 ---
-+ __Last update:__  2017/07/19
-+ __Version:__      0.0.5
++ __Last update:__  2017/07/25
++ __Version:__      0.0.6
 
 
 Tested
@@ -37,3 +37,4 @@ Changelog
 + 0.0.3       Simpler example/custom-directory.html avoids COS and iframe issues
 + 0.0.4       Allows multiple buffers
 + 0.0.5       Show/hide cache and directory; draws ADSR; three cache sections
++ 0.0.6       Expects Seqins to be fully Promise-based

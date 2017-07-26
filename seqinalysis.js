@@ -70,24 +70,24 @@ ROOT.SEQINALYSIS = {
         //// Create a directory of Seqins which are available to load.
         $seqinDirectory = d.createElement('div')
         $seqinDirectory.className = 'seqin-directory'
-        for (let familyID in ROOT.SEQIN.directory) {
-            if ('CDN' == familyID || 'META' == familyID) continue
-            let family = ROOT.SEQIN.directory[familyID]
+        for (let familyId in ROOT.SEQIN.directory) {
+            if ('CDN' == familyId || 'META' == familyId) continue
+            let family = ROOT.SEQIN.directory[familyId]
               , $family = d.createElement('div')
               , isLoaded = ROOT.SEQIN[family.META.NAME]
             $family.className = isLoaded ? 'loaded' : 'not-loaded'
             $family.id = `directory-${family.META.ID}`
-            $family.innerHTML = `<h4>${family.META.NAME} ${loadButton(family.META.NAME, familyID)}</h4>`
+            $family.innerHTML = `<h4>${family.META.NAME} ${loadButton(family.META.NAME, familyId)}</h4>`
             let seqinTally = 0
-            for (let seqinID in family) {
-                if ('CDN' == seqinID || 'META' == seqinID) continue
-                let seqin = family[seqinID]
+            for (let seqinId in family) {
+                if ('CDN' == seqinId || 'META' == seqinId) continue
+                let seqin = family[seqinId]
                   , $seqin = d.createElement('div')
                   , isLoaded = ROOT.SEQIN[seqin.META.NAME]
                 $seqin.className = isLoaded ? 'loaded' : 'not-loaded'
                 $seqin.id = `directory-${seqin.META.ID}`
                 $seqin.innerHTML =
-                  `<p>${seqin.META.NAME} ${loadButton(seqin.META.NAME, familyID, seqinID)} ${instantiateButton(seqin.META.NAME, familyID, seqinID)}</p>`
+                  `<p>${seqin.META.NAME} ${loadButton(seqin.META.NAME, familyId, seqinId)} ${instantiateButton(seqin.META.NAME, familyId, seqinId)}</p>`
                 $family.appendChild($seqin)
                 seqinTally++
             }
@@ -202,8 +202,8 @@ ROOT.SEQINALYSIS = {
 
 
     //// Xx.
-  , load: (familyID, seqinID) => {
-        const directoryInfo = seqinID ? SEQIN.directory[familyID][seqinID] : SEQIN.directory[familyID]
+  , load: (familyId, seqinId) => {
+        const directoryInfo = seqinId ? SEQIN.directory[familyId][seqinId] : SEQIN.directory[familyId]
         const $directoryItem = $(`#directory-${directoryInfo.META.ID}`)
 
         //// If the script has already been loaded, resolve immediately.
@@ -226,14 +226,14 @@ ROOT.SEQINALYSIS = {
 
 
     //// Xx.
-  , instantiate: (familyID, seqinID, id, config) => { // `id` and `config` are optional, used by initInstantiate()
-        const directoryInfo = seqinID ? SEQIN.directory[familyID][seqinID] : SEQIN.directory[familyID]
+  , instantiate: (familyId, seqinId, id, config) => { // `id` and `config` are optional, used by initInstantiate()
+        const directoryInfo = seqinId ? SEQIN.directory[familyId][seqinId] : SEQIN.directory[familyId]
 
         //// Generate an id - only needed when an instantiateButton() is clicked.
         if (null == id) {
             let tally = 0
-            for (let instanceID in instances)
-                if (directoryInfo.META.ID === instanceID.split('_')[0]) tally++
+            for (let instanceId in instances)
+                if (directoryInfo.META.ID === instanceId.split('_')[0]) tally++
             id = `${directoryInfo.META.ID}_${tally}`
         }
 
@@ -244,6 +244,9 @@ ROOT.SEQINALYSIS = {
                 samplesPerBuffer: 2900
               , channelCount:     1
               , text:             id
+              , attackDuration:   300
+              , decayDuration:    900
+              , releaseDuration:  1000
             }
         }
         config.sampleRate = audioCtx.sampleRate //@TODO allow instances to specify arbitrary sampleRate
@@ -260,26 +263,29 @@ ROOT.SEQINALYSIS = {
 
 
     //// Xx.
-  , editInstance: (instanceID) => {
-        let instance = instances[instanceID]
+  , editInstance: (instanceId) => {
+        let instance = instances[instanceId]
         const config = {
             samplesPerBuffer: instance.samplesPerBuffer
           , sampleRate: instance.sampleRate
           , channelCount: instance.channelCount
+          , attackDuration: instance.attackDuration
+          , decayDuration: instance.decayDuration
+          , releaseDuration: instance.releaseDuration
           , configString: instance.configString
           , text: instance.text
           , id: instance.id
           , sharedCache: ROOT.sharedCache
           , audioContext: audioCtx
         }
-        const response = prompt(`Edit config-string for ${instanceID}`, config.configString)
+        const response = prompt(`Edit config-string for ${instanceId}`, config.configString)
         if (null == response) return
         instanceStringToConfig(config, response)
-        const seqinID = instanceID.split('_')[0]
-        const familyID = seqinID.slice(-2)
-        const directoryInfo = SEQIN.directory[familyID][seqinID]
-        instance = instances[instanceID] = new SEQIN[directoryInfo.META.NAME](config)
-        instance.id = instanceID
+        const seqinId = instanceId.split('_')[0]
+        const familyId = seqinId.slice(-2)
+        const directoryInfo = SEQIN.directory[familyId][seqinId]
+        instance = instances[instanceId] = new SEQIN[directoryInfo.META.NAME](config)
+        instance.id = instanceId
         instance.configString = instanceConfigToString(config)
         updateSeqinInstances()
         return false
@@ -287,12 +293,12 @@ ROOT.SEQINALYSIS = {
 
 
     //// Xx.
-  , closeInstance: (instanceID) => {
+  , closeInstance: (instanceId) => {
         performBtns = performBtns.filter(
-            performBtn => instanceID+'_' !== performBtn.id.slice(0, instanceID.length+1)
+            performBtn => instanceId+'_' !== performBtn.id.slice(0, instanceId.length+1)
         )
-        delete instances[instanceID]
-        const $el = $(`#instance-${instanceID}`)
+        delete instances[instanceId]
+        const $el = $(`#instance-${instanceId}`)
         $el.parentNode.removeChild($el)
         console.log(instances, performBtns);
         updateSeqinInstances()
@@ -301,16 +307,16 @@ ROOT.SEQINALYSIS = {
 
 
     //// A button generates and plays a performance, and draws its waveform.
-  , addButton: (instanceID, id, config) => { // `id` and `config` are optional, used by initAddButton()
+  , addButton: (instanceId, id, config) => { // `id` and `config` are optional, used by initAddButton()
 
         //// Generate an id - only needed when an addButtonButton() is clicked.
         if (null == id) {
             let tally = 0
             performBtns.forEach( performBtn => {
                 const idParts = performBtn.id.split('_')
-                if (instanceID === `${idParts[0]}_${idParts[1]}`) tally++
+                if (instanceId === `${idParts[0]}_${idParts[1]}`) tally++
             })
-            id = `${instanceID}_${tally}`
+            id = `${instanceId}_${tally}`
         }
 
         //// Generate configuration for perform(), and also for Seqinalysis.
@@ -392,7 +398,7 @@ ROOT.SEQINALYSIS = {
             evt.preventDefault()
 
             //// Generate the performance buffers.
-            instances[instanceID].perform({
+            instances[instanceId].perform({
                 bufferCount: config.bufferCount
               , cyclesPerBuffer: config.cyclesPerBuffer
               , isLooping: false
@@ -406,7 +412,7 @@ ROOT.SEQINALYSIS = {
 
                 //// Store it.
                 performances.push({ config, buffers })
-                maxPerformanceSamples = Math.max( maxPerformanceSamples, instances[instanceID].samplesPerBuffer * (config.bufferCount||1) )
+                maxPerformanceSamples = Math.max( maxPerformanceSamples, instances[instanceId].samplesPerBuffer * (config.bufferCount||1) )
 
                 //// Update the layered and sharedCache visualisers.
                 updateLayeredVisualiser()
@@ -455,8 +461,8 @@ ROOT.SEQINALYSIS = {
             query.push('hide=cache')
         if (! $('body').classList.contains('show-directory') )
             query.push('hide=directory')
-        for (let instanceID in instances) {
-            const instance = instances[instanceID]
+        for (let instanceId in instances) {
+            const instance = instances[instanceId]
             let configString = instance.configString
                .replace(/%/g,'%25').replace(/&/g,'%26').replace(/=/g,'%3d')
             query.push(`${instance.id}=${configString}`)
@@ -754,20 +760,20 @@ function updateSharedCacheVisualiser () {
 
 function updateSeqinInstances () {
     let instanceTally = 0
-    for (let instanceID in instances) {
+    for (let instanceId in instances) {
         instanceTally++
-        const instance = instances[instanceID]
-        let $instance = $(`#instance-${instanceID}`)
+        const instance = instances[instanceId]
+        let $instance = $(`#instance-${instanceId}`)
         if (! $instance) { // need to create it
             $instance = d.createElement('div')
-            $instance.id = `instance-${instanceID}`
-            $instance.innerHTML = `<h4><span class="btn">${instanceID}</span> ${editInstanceButton(instanceID)} ${addButtonButton(instanceID)} ${closeInstanceButton(instanceID)}</h4>`
+            $instance.id = `instance-${instanceId}`
+            $instance.innerHTML = `<h4><span class="btn">${instanceId}</span> ${editInstanceButton(instanceId)} ${addButtonButton(instanceId)} ${closeInstanceButton(instanceId)}</h4>`
             $seqinInstances.appendChild($instance)
         }
         let performTally = 0
         performBtns.forEach(performBtn => {
             const idParts = performBtn.id.split('_')
-            if (instanceID !== `${idParts[0]}_${idParts[1]}`) return
+            if (instanceId !== `${idParts[0]}_${idParts[1]}`) return
             performTally++
             let $performBtn = $(`#performBtn-${performBtn.id}`)
             if (! $performBtn) { // need to attach it
@@ -795,6 +801,9 @@ function instanceStringToConfig (config, configString) {
       , cc: 'channelCount'
     //   , sr: 'sampleRate' //@TODO allow instances to specify arbitrary sampleRate
       , sb: 'samplesPerBuffer'
+      , ad: 'attackDuration'
+      , dd: 'decayDuration'
+      , rd: 'releaseDuration'
     }
     configString.split('+').forEach( part => {
         const key = keys[ part.slice(0,2) ]
@@ -811,6 +820,9 @@ function instanceConfigToString (config) {
       , channelCount: 'cc'
     //   , sampleRate: 'sr' //@TODO allow instances to specify arbitrary sampleRate
       , samplesPerBuffer: 'sb'
+      , attackDuration: 'ad'
+      , decayDuration: 'dd'
+      , releaseDuration: 'rd'
     }
     let configString = []
     for (let key in keys)
@@ -862,9 +874,9 @@ function performBtnConfigToString (config) {
 function initLoadFirst (toLoadFirst) {
     return new Promise( (resolve, reject) => {
         let tally = 0
-        for (let familyID in toLoadFirst) tally++
-        for (let familyID in toLoadFirst) {
-            ROOT.SEQINALYSIS.load(familyID)
+        for (let familyId in toLoadFirst) tally++
+        for (let familyId in toLoadFirst) {
+            ROOT.SEQINALYSIS.load(familyId)
                .then( () => {if (! --tally) resolve()} ) // resolve when all scripts have loaded
         }
     })
@@ -872,9 +884,9 @@ function initLoadFirst (toLoadFirst) {
 function initLoadSecond (toLoadSecond) {
     return new Promise( (resolve, reject) => {
         let tally = 0
-        for (let seqinID in toLoadSecond) tally++
-        for (let seqinID in toLoadSecond) {
-            ROOT.SEQINALYSIS.load(seqinID.slice(-2), seqinID)
+        for (let seqinId in toLoadSecond) tally++
+        for (let seqinId in toLoadSecond) {
+            ROOT.SEQINALYSIS.load(seqinId.slice(-2), seqinId)
                .then( () => {if (! --tally) resolve()} ) // resolve when all scripts have loaded
         }
     })
@@ -882,25 +894,25 @@ function initLoadSecond (toLoadSecond) {
 function initInstantiate (toInstantiate) {
     return new Promise( (resolve, reject) => {
         let tally = 0
-        for (let instanceID in toInstantiate) tally++
-        for (let instanceID in toInstantiate) {
-            const seqinID = instanceID.split('_')[0]
-            const familyID = seqinID.slice(-2)
+        for (let instanceId in toInstantiate) tally++
+        for (let instanceId in toInstantiate) {
+            const seqinId = instanceId.split('_')[0]
+            const familyId = seqinId.slice(-2)
             const config = {}
-            instanceStringToConfig(config, toInstantiate[instanceID])
-            config.id = instanceID
-            ROOT.SEQINALYSIS.instantiate(familyID, seqinID, instanceID, config)
+            instanceStringToConfig(config, toInstantiate[instanceId])
+            config.id = instanceId
+            ROOT.SEQINALYSIS.instantiate(familyId, seqinId, instanceId, config)
                .then( () => {if (! --tally) resolve()} ) // resolve when all scripts have loaded
         }
     })
 }
 function initAddButton (toAddButton) {
     for (let id in toAddButton) {
-        const instanceID = id.split('_').slice(0,2).join('_')
+        const instanceId = id.split('_').slice(0,2).join('_')
         const config = {}
         performBtnStringToConfig(config, toAddButton[id])
         config.id = id
-        ROOT.SEQINALYSIS.addButton(instanceID, id, config)
+        ROOT.SEQINALYSIS.addButton(instanceId, id, config)
     }
 }
 
@@ -1012,24 +1024,24 @@ function navButtons () { return `
 `
 }
 
-function loadButton (name, familyID, seqinID='') { return `
-<a class="btn load" href="javascript:SEQINALYSIS.load('${familyID}','${seqinID}');void(0)" title="Load ${name}">
+function loadButton (name, familyId, seqinId='') { return `
+<a class="btn load" href="javascript:SEQINALYSIS.load('${familyId}','${seqinId}');void(0)" title="Load ${name}">
   <svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640">
     <rect x="40" y="520" width="560" height="80"/>
     <polygon points="600,200 40,200 320,520 "/>
   </svg>
 </a>`
 }
-function instantiateButton (name, familyID, seqinID) { return `
-<a class="btn add" href="javascript:SEQINALYSIS.instantiate('${familyID}','${seqinID}');void(0)" title="Instantiate ${name}">
+function instantiateButton (name, familyId, seqinId) { return `
+<a class="btn add" href="javascript:SEQINALYSIS.instantiate('${familyId}','${seqinId}');void(0)" title="Instantiate ${name}">
   <svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640">
     <rect x="80" y="320" width="480" height="80"/>
     <rect x="280" y="120" width="80" height="480"/>
   </svg>
 </a>`
 }
-function editInstanceButton (instanceID) { return `
-<a class="btn edit" href="javascript:SEQINALYSIS.editInstance('${instanceID}');void(0)" title="Edit ${instanceID}">
+function editInstanceButton (instanceId) { return `
+<a class="btn edit" href="javascript:SEQINALYSIS.editInstance('${instanceId}');void(0)" title="Edit ${instanceId}">
   <svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640">
     <rect x="217.628" y="197.497" transform="matrix(0.8739 0.486 -0.486 0.8739 194.4406 -117.1647)" width="211" height="237.5"/>
     <path d="M328.727,89.14c8.555-15.381,28.138-20.968,43.52-12.414l128.42,71.417
@@ -1039,16 +1051,16 @@ function editInstanceButton (instanceID) { return `
   </svg>
 </a>`
 }
-function closeInstanceButton (instanceID) { return `
-<a class="btn close" href="javascript:SEQINALYSIS.closeInstance('${instanceID}');void(0)" title="Close ${instanceID}">
+function closeInstanceButton (instanceId) { return `
+<a class="btn close" href="javascript:SEQINALYSIS.closeInstance('${instanceId}');void(0)" title="Close ${instanceId}">
   <svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640">
     <rect x="40" y="280" transform="matrix(0.7071 -0.7071 0.7071 0.7071 -132.5485 320.0001)" width="560" height="80"/>
     <rect x="40" y="280" transform="matrix(0.7071 0.7071 -0.7071 0.7071 320 -132.5479)" width="560" height="80"/>
   </svg>
 </a>`
 }
-function addButtonButton (instanceID) { return `
-<a class="btn add" href="javascript:SEQINALYSIS.addButton('${instanceID}');void(0)" title="Add a performance-button to ${instanceID}">
+function addButtonButton (instanceId) { return `
+<a class="btn add" href="javascript:SEQINALYSIS.addButton('${instanceId}');void(0)" title="Add a performance-button to ${instanceId}">
   <svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640">
     <rect x="60" y="280" width="520" height="80"/>
     <rect x="280" y="60" width="80" height="520"/>
