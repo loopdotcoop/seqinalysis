@@ -77,7 +77,7 @@ ROOT.SEQINALYSIS = {
               , isLoaded = ROOT.SEQIN[family.META.NAME]
             $family.className = isLoaded ? 'loaded' : 'not-loaded'
             $family.id = `directory-${family.META.ID}`
-            $family.innerHTML = `<h4>${family.META.NAME} ${loadButton(family.META.NAME, familyId)}</h4>`
+            $family.innerHTML = `<h4>${family.META.NAME} ${loadButton(family.META.NAME, familyId)} ${instantiateButton(family.META.NAME, familyId)}</h4>`
             let seqinTally = 0
             for (let seqinId in family) {
                 if ('CDN' == seqinId || 'META' == seqinId) continue
@@ -160,9 +160,14 @@ ROOT.SEQINALYSIS = {
                         if ('directory' === value) setTimeout(resize, 100)
                     }
                 } else if (2 === parts.length) { // defines an instance
-                    const seqin = parts[0]
-                    const family = seqin.slice(-2)
-                    toLoadSecond[seqin] = 1 // eg 'r1ma'
+                    let family, specific
+                    if (2 === parts[0].length) { // instance of a family Seqin
+                        family = parts[0]
+                    } else {                     // instance of a specific Seqin
+                        specific = parts[0]
+                        family = specific.slice(-2)
+                        toLoadSecond[specific] = 1 // eg 'r1ma'
+                    }
                     toLoadFirst[family] = 1 // eg 'ma'
                     toInstantiate[id] = value // `value` is a configString
                 } else {
@@ -226,7 +231,7 @@ ROOT.SEQINALYSIS = {
 
 
     //// Xx.
-  , instantiate: (familyId, seqinId, id, config) => { // `id` and `config` are optional, used by initInstantiate()
+  , instantiate: (familyId, seqinId, id, config={}) => { // `id` and `config` are optional, used by initInstantiate()
         const directoryInfo = seqinId ? SEQIN.directory[familyId][seqinId] : SEQIN.directory[familyId]
 
         //// Generate an id - only needed when an instantiateButton() is clicked.
@@ -237,27 +242,16 @@ ROOT.SEQINALYSIS = {
             id = `${directoryInfo.META.ID}_${tally}`
         }
 
-        //// Generate configuration for perform(), and also for Seqinalysis.
-        //// Again, only needed when an addButtonButton() is clicked.
-        if (null == config) {
-            config = {
-                samplesPerBuffer: 2900
-              , channelCount:     1
-              , text:             id
-              , attackDuration:   300
-              , decayDuration:    900
-              , releaseDuration:  1000
-            }
-        }
+        //// Generate configuration for the Seqin constructor().
         config.sampleRate = audioCtx.sampleRate //@TODO allow instances to specify arbitrary sampleRate
         config.sharedCache = ROOT.sharedCache
         config.audioContext = audioCtx
 
         const instance = instances[id] = new SEQIN[directoryInfo.META.NAME](config)
         instance.id = id
+        instance.text = config.text || id
         instance.configString = instanceConfigToString(config)
         updateSeqinInstances()
-
         return instance.ready // a Promise which fulfills after instance._setup() completes
     }
 
@@ -273,7 +267,7 @@ ROOT.SEQINALYSIS = {
           , decayDuration: instance.decayDuration
           , releaseDuration: instance.releaseDuration
           , configString: instance.configString
-          , text: instance.text
+          , text: instance.text || instanceId
           , id: instance.id
           , sharedCache: ROOT.sharedCache
           , audioContext: audioCtx
@@ -281,11 +275,18 @@ ROOT.SEQINALYSIS = {
         const response = prompt(`Edit config-string for ${instanceId}`, config.configString)
         if (null == response) return
         instanceStringToConfig(config, response)
-        const seqinId = instanceId.split('_')[0]
-        const familyId = seqinId.slice(-2)
-        const directoryInfo = SEQIN.directory[familyId][seqinId]
+        let familyId, specificId, parts = instanceId.split('_')
+        if (2 === parts[0].length) { // instance of a family Seqin
+            specificId = ''
+            familyId = parts[0]
+        } else {                     // instance of a specific Seqin
+            specificId = parts[0]
+            familyId = specificId.slice(-2)
+        }
+        const directoryInfo = specificId ? SEQIN.directory[familyId][specificId] :  SEQIN.directory[familyId]
         instance = instances[instanceId] = new SEQIN[directoryInfo.META.NAME](config)
         instance.id = instanceId
+        $(`#instance-${instanceId} span.btn`).innerHTML = config.text || instanceId
         instance.configString = instanceConfigToString(config)
         updateSeqinInstances()
         return false
@@ -351,7 +352,7 @@ ROOT.SEQINALYSIS = {
         $playBtn.style.backgroundColor = bkgndColor
         $playBtn.href = 'javascript:void(0)'
         if (config.playKey) $playBtn.setAttribute('data-key', config.playKey)
-        $playBtn.innerHTML = config.text
+        $playBtn.innerHTML = config.text || id
 //         $playBtn.innerHTML =
 // `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640">
 //     <polygon points="160,160 160,560 520,360 "/>
@@ -438,6 +439,7 @@ ROOT.SEQINALYSIS = {
             if (null == response) return
             performBtnStringToConfig(config, response)
             updateSeqinInstances()
+            performBtns.find(btn => btn.id === config.id).$el.querySelector('a.play.btn').innerHTML = config.text || config.id
             return false
         })
 
@@ -767,7 +769,7 @@ function updateSeqinInstances () {
         if (! $instance) { // need to create it
             $instance = d.createElement('div')
             $instance.id = `instance-${instanceId}`
-            $instance.innerHTML = `<h4><span class="btn">${instanceId}</span> ${editInstanceButton(instanceId)} ${addButtonButton(instanceId)} ${closeInstanceButton(instanceId)}</h4>`
+            $instance.innerHTML = `<h4><span class="btn">${instance.text || instanceId}</span> ${editInstanceButton(instanceId)} ${addButtonButton(instanceId)} ${closeInstanceButton(instanceId)}</h4>`
             $seqinInstances.appendChild($instance)
         }
         let performTally = 0
@@ -872,9 +874,9 @@ function performBtnConfigToString (config) {
 
 
 function initLoadFirst (toLoadFirst) {
+    let tally = Object.keys(toLoadFirst).length
+    if (! tally) return Promise.resolve()
     return new Promise( (resolve, reject) => {
-        let tally = 0
-        for (let familyId in toLoadFirst) tally++
         for (let familyId in toLoadFirst) {
             ROOT.SEQINALYSIS.load(familyId)
                .then( () => {if (! --tally) resolve()} ) // resolve when all scripts have loaded
@@ -882,9 +884,9 @@ function initLoadFirst (toLoadFirst) {
     })
 }
 function initLoadSecond (toLoadSecond) {
+    let tally = Object.keys(toLoadSecond).length
+    if (! tally) return Promise.resolve()
     return new Promise( (resolve, reject) => {
-        let tally = 0
-        for (let seqinId in toLoadSecond) tally++
         for (let seqinId in toLoadSecond) {
             ROOT.SEQINALYSIS.load(seqinId.slice(-2), seqinId)
                .then( () => {if (! --tally) resolve()} ) // resolve when all scripts have loaded
@@ -896,12 +898,18 @@ function initInstantiate (toInstantiate) {
         let tally = 0
         for (let instanceId in toInstantiate) tally++
         for (let instanceId in toInstantiate) {
-            const seqinId = instanceId.split('_')[0]
-            const familyId = seqinId.slice(-2)
+            let familyId, specificId, parts = instanceId.split('_')
+            if (2 === parts[0].length) { // instance of a family Seqin
+                specificId = ''
+                familyId = parts[0]
+            } else {                     // instance of a specific Seqin
+                specificId = parts[0]
+                familyId = specificId.slice(-2)
+            }
             const config = {}
             instanceStringToConfig(config, toInstantiate[instanceId])
             config.id = instanceId
-            ROOT.SEQINALYSIS.instantiate(familyId, seqinId, instanceId, config)
+            ROOT.SEQINALYSIS.instantiate(familyId, specificId, instanceId, config)
                .then( () => {if (! --tally) resolve()} ) // resolve when all scripts have loaded
         }
     })
@@ -1032,7 +1040,7 @@ function loadButton (name, familyId, seqinId='') { return `
   </svg>
 </a>`
 }
-function instantiateButton (name, familyId, seqinId) { return `
+function instantiateButton (name, familyId, seqinId='') { return `
 <a class="btn add" href="javascript:SEQINALYSIS.instantiate('${familyId}','${seqinId}');void(0)" title="Instantiate ${name}">
   <svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640">
     <rect x="80" y="320" width="480" height="80"/>

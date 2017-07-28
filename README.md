@@ -17,8 +17,8 @@ Built by Rich Plastow and Monty Anderson for Loop.Coop.
 
 App
 ---
-+ __Last update:__  2017/07/25
-+ __Version:__      0.0.6
++ __Last update:__  2017/07/28
++ __Version:__      0.0.7
 
 
 Tested
@@ -38,3 +38,6 @@ Changelog
 + 0.0.4       Allows multiple buffers
 + 0.0.5       Show/hide cache and directory; draws ADSR; three cache sections
 + 0.0.6       Expects Seqins to be fully Promise-based
++ 0.0.7       Can instantiate and play second-tier (family) Seqins
+
+NEXT: Popup to edit instances and perform-buttons

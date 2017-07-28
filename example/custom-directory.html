@@ -35,32 +35,32 @@ window.SEQIN = {}
 window.SEQIN.directory = {
 
     //// The base ‘Seqin’ class.
-    CDN: 'https://rawgit.com/loopdotcoop/seqin-si/master/Seqin.js'
+    CDN: 'https://rawgit.com/loopdotcoop/seqin-base/master/seqin-base.js'
   , META: {
         NAME: 'Seqin'
-      , ID: 'si'
-      , VERSION: '0.0.12'
-      , SPEC: '20170705'
+      , ID: 'base'
+      , VERSION: '1.0.1'
+      , SPEC: '20170728'
       , HELP: 'The base class for all sequencer instruments. It’s not usually used directly - it just generates silent buffers.'
     }
 
     //// The ‘MathSeqin’ family.
   , ma: {
-        CDN: 'https://rawgit.com/loopdotcoop/seqin-ma/master/MathSeqin.js'
+        CDN: 'https://rawgit.com/loopdotcoop/seqin-ma/master/seqin-ma.js'
       , META: {
             NAME: 'MathSeqin'
           , ID: 'ma'
-          , VERSION: '0.0.7'
-          , SPEC: '20170705'
-          , HELP: 'The base class for all mathematical Seqins. It’s not usually used directly - it just generates silent buffers.'
+          , VERSION: '1.0.0'
+          , SPEC: '20170728'
+          , HELP: 'The base class for all mathematical Seqins. It generates sine waves with ADSR envelopes.'
         }
       , myma: {
             CDN: './MyLocalMathSeqin.js'
           , META: {
                 NAME: 'MyLocalMathSeqin'
               , ID: 'myma'
-              , VERSION: '0.0.2'
-              , SPEC: '20170705'
+              , VERSION: '0.0.3'
+              , SPEC: '20170728'
               , HELP: 'Example of how to specify a locally-hosted Seqin - great for development!'
             }
         }
@@ -69,7 +69,7 @@ window.SEQIN.directory = {
 </script>
 
 <!-- Load the seqin-si base class, and the main Seqinalysis app -->
-<script src="https://rawgit.com/loopdotcoop/seqin-si/master/Seqin.js"></script>
+<script src="https://rawgit.com/loopdotcoop/seqin-base/master/seqin-base.js"></script>
 <script src="https://rawgit.com/loopdotcoop/seqinalysis/master/seqinalysis.js"></script>
 
 </head>

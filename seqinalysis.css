@@ -263,9 +263,11 @@ body.show-directory #seqinalysis .seqin-instances {
 #seqinalysis .seqin-directory .not-loaded div p >a.load {
     display: none;
 }
+#seqinalysis .seqin-directory div h4 >a.add,
 #seqinalysis .seqin-directory div p >a.add {
     display: none;
 }
+#seqinalysis .seqin-directory div.loaded h4 >a.add,
 #seqinalysis .seqin-directory div.loaded div.loaded a.add {
     display: inherit;
 }

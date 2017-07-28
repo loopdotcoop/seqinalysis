@@ -5,8 +5,8 @@
 const META = {
     NAME:    { value:'MyLocalMathSeqin' }
   , ID:      { value:'myma'           }
-  , VERSION: { value:'0.0.2'          }
-  , SPEC:    { value:'20170705'       }
+  , VERSION: { value:'0.0.3'          }
+  , SPEC:    { value:'20170728'       }
   , HELP:    { value:
 `Example of how to specify a locally-hosted Seqin - great for development!` }
 }
